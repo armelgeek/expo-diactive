@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native'
-import { Text, Card, Button } from 'react-native-paper'
+import { Text, Card, Button, Divider } from 'react-native-paper'
 import { supabase } from '../../services/supabase'
 
-export const OrdersScreen = () => {
+export const OrdersScreen = ({ navigation }) => {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -11,40 +11,43 @@ export const OrdersScreen = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true)
+      setError(null)
+
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: orders, error } = await supabase
+      if (!user) throw new Error('Non authentifié')
+
+      const { data, error } = await supabase
         .from('orders')
         .select(`
           id,
+          created_at,
           status,
           total_points,
-          created_at,
           partner:partners (
-            id,
-            company_name
+            company_name,
+            logo_url
           ),
           order_items (
             id,
             quantity,
             points_cost,
             reward:rewards (
-              id,
               title,
+              description,
               image_url
             ),
             product:products (
-              id,
               title,
+              description,
               image_url
             )
           )
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-  
+
       if (error) throw error
-      setOrders(orders || [])
+      setOrders(data || [])
     } catch (err) {
       console.error('Error fetching orders:', err)
       setError(err.message)
@@ -52,58 +55,141 @@ export const OrdersScreen = () => {
       setLoading(false)
     }
   }
-    useEffect(() => {
+
+  useEffect(() => {
     fetchOrders()
   }, [])
-  console.log('orders', orders)
+
+  const handleShowQRCode = (order) => {
+    navigation.navigate('QRCode', { 
+      orderId: order.id,
+      orderData: {
+        partnerId: order.partner.id,
+        items: order.order_items,
+        total: order.total_points
+      }
+    })
+  }
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending':
+        return '#FFA000' // Orange
+      case 'validated':
+        return '#4CAF50' // Vert
+      case 'completed':
+        return '#2196F3' // Bleu
+      default:
+        return '#666666' // Gris
+    }
+  }
+
   return (
-    <View style={styles.container}>
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={fetchOrders} />
-        }
-      >
-        {orders.map(order => (
-          <Card key={order.id} style={styles.card}>
-            <Card.Content>
-              <Text variant="titleMedium">
-                Commande #{order.id.slice(0, 8)}
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={loading} onRefresh={fetchOrders} />
+      }
+    >
+      {error && (
+        <Text style={styles.error}>{error}</Text>
+      )}
+
+      {orders.map(order => (
+        <Card key={order.id} style={styles.card}>
+          <Card.Title 
+            title={`Commande #${order.id}`}
+            subtitle={`Chez ${order.partner.company_name}`}
+          />
+          <Card.Content>
+            <View style={styles.statusContainer}>
+              <Text style={[styles.status, { color: getStatusColor(order.status) }]}>
+                {order.status === 'pending' && 'En attente'}
+                {order.status === 'validated' && 'Validée'}
+                {order.status === 'completed' && 'Terminée'}
               </Text>
-              <Text variant="bodyMedium">
-                Statut: {order.status}
-              </Text>
-              <Text variant="bodyMedium">
-                Total: {order.total_points} points
-              </Text>
-              {/* Afficher les éléments de la commande */}
-              {order.order_items.map(item => (
-                <View key={item.id} style={styles.itemContainer}>
-                  <Text>
-                    {item.reward?.title || item.product?.title} x{item.quantity}
-                  </Text>
-                  <Text>{item.points_cost} points</Text>
-                </View>
-              ))}
-            <View style={styles.partnerInfoContainer}>
-              <Text variant="titleMedium">Partenaire: {order.partner.company_name}</Text>
+              <Text style={styles.total}>{order.total_points} points</Text>
             </View>
-            </Card.Content>
-          </Card>
-        ))}
-      </ScrollView>
-    </View>
+
+            <Divider style={styles.divider} />
+
+            {order.order_items.map(item => (
+              <View key={item.id} style={styles.item}>
+                {item.reward ? (
+                  <>
+                    <Text variant="titleMedium">{item.reward.title}</Text>
+                    <Text variant="bodySmall">{item.quantity} x {item.points_cost} points</Text>
+                  </>
+                ) : item.product ? (
+                  <>
+                    <Text variant="titleMedium">{item.product.title}</Text>
+                    <Text variant="bodySmall">{item.quantity} x {item.points_cost} points</Text>
+                  </>
+                ) : null}
+              </View>
+            ))}
+
+            {order.status === 'validated' && (
+              <Button
+                mode="contained"
+                onPress={() => handleShowQRCode(order)}
+                style={styles.qrButton}
+              >
+                Voir le QR Code
+              </Button>
+            )}
+          </Card.Content>
+        </Card>
+      ))}
+
+      {orders.length === 0 && !loading && (
+        <Text style={styles.emptyText}>
+          Aucune commande pour le moment
+        </Text>
+      )}
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  card: {
+    margin: 16,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    marginBottom: 8,
+  },
+  status: {
+    fontWeight: 'bold',
+  },
+  total: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2196F3',
+  },
+  item: {
+    marginVertical: 8,
+  },
+  divider: {
+    marginVertical: 12,
+  },
+  qrButton: {
+    marginTop: 16,
   },
   error: {
-    color: 'red',
+    color: '#B00020',
+    margin: 16,
     textAlign: 'center',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 32,
   },
 }) 
