@@ -8,6 +8,7 @@ const mapRewardFromDB = (dbReward) => {
     title: dbReward.title || '',
     description: dbReward.description || '',
     pointsCost: dbReward.points_cost || 0,
+    partner_id: dbReward.partner_id || null,
     stock: dbReward.stock || 0,
     imageUrl: dbReward.image_url || ''
   }
@@ -53,6 +54,7 @@ export const rewardsApi = {
     try {
       const { data, error } = await supabase
         .from('rewards')
+
         .select('*')
         .gt('stock', 0)
         .order('points_cost', { ascending: true })

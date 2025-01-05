@@ -8,6 +8,7 @@ export const useCart = () => {
 
   // Ajouter un article au panier
   const addToCart = useCallback((item, type = 'reward') => {
+  
     setItems(currentItems => {
       // Vérifier si l'article existe déjà
       const existingItem = currentItems.find(i => i.id === item.id && i.type === type)
@@ -25,6 +26,7 @@ export const useCart = () => {
             : i
         )
       }
+      console.log('addToCart', item, type)
 
       // Ajouter le nouvel article
       return [...currentItems, {

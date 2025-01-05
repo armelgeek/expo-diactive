@@ -13,7 +13,17 @@ export const useRewards = () => {
       setLoading(true)
       setError(null)
       const data = await rewardsApi.fetchAvailableRewards()
-      setRewards(data || [])
+      console.log('data', data)
+      const mappedData = data.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        points_cost: item.pointsCost,
+        imageUrl: item.image_url,
+        partner_id: item.partner_id,
+        stock: item.stock
+      }))
+      setRewards(mappedData || [])
     } catch (error) {
       console.error('Error in useRewards.fetchRewards:', error)
       setError(error.message)

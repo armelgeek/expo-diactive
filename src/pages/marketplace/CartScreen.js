@@ -27,7 +27,7 @@ export const CartScreen = ({ navigation }) => {
 
   const products = items.filter(item => item.type === 'product')
   const rewards = items.filter(item => item.type === 'reward')
-
+  console.log('items', items)
   if (items.length === 0) {
     return (
       <View style={[styles.container, styles.centered]}>

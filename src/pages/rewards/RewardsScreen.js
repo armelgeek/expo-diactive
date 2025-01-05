@@ -4,14 +4,17 @@ import { Text, Card, Button, Snackbar } from 'react-native-paper'
 import { useRewards } from '../../hooks/useRewards'
 import { useCart } from '../../hooks/useCart'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { useCartContext } from '../../contexts/CartContext'
 
 export const RewardsScreen = ({ navigation }) => {
   const { loading, rewards, fetchRewards } = useRewards()
-  const { addToCart } = useCart()
+  const { addToCart, error: cartError } = useCartContext()
+
   const [error, setError] = useState(null)
   const [snackbarVisible, setSnackbarVisible] = useState(false)
 
   const handleAddToCart = useCallback(async (reward) => {
+    console.log('handleAddToCart', reward)
     try {
       setError(null)
       await addToCart(reward, 'reward')
@@ -20,7 +23,7 @@ export const RewardsScreen = ({ navigation }) => {
       setError(err.message)
     }
   }, [addToCart])
-
+  console.log('rewards', rewards) 
   return (
     <View style={styles.container}>
       <ScrollView 
@@ -68,7 +71,7 @@ export const RewardsScreen = ({ navigation }) => {
             <Card.Actions>
               <Button 
                 mode="contained"
-                onPress={() => handleAddToCart(reward)}
+                onPress={() => handleAddToCart({...reward, type: 'reward'})}
                 disabled={reward.stock < 1}
               >
                 Ajouter au panier

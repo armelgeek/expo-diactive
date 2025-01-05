@@ -26,16 +26,17 @@ const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
 
 const MarketplaceStack = () => (
-  <Stack.Navigator>
+  <Stack.Navigator initialRouteName='MarketplaceMain'>
     <Stack.Screen 
       name="MarketplaceMain" 
       component={MarketplaceScreen}
+    
       options={{ title: 'Bons Plans' }}
     />
     <Stack.Screen 
       name="PartnerDetails" 
       component={PartnerDetailsScreen}
-      options={({ route }) => ({ title: route.params.partner.business_name })}
+      options={({ route }) => ({ title: route.params.partner.company_name })}
     />
     <Stack.Screen 
       name="ProductDetails" 
@@ -47,11 +48,7 @@ const MarketplaceStack = () => (
       component={ReviewsScreen}
       options={{ title: 'Avis' }}
     />
-  <Stack.Screen 
-      name="Cart" 
-      component={CartScreen}
-      options={{ title: 'Mon panier' }}
-    />
+
   </Stack.Navigator>
 )
 
