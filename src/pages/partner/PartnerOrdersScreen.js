@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native'
-import { Text, Card, Divider } from 'react-native-paper'
+import { Text, Card, Divider, Button } from 'react-native-paper'
 import { supabase } from '../../services/supabase'
 
-export const PartnerOrdersScreen = ({ route }) => {
+export const PartnerOrdersScreen = ({ route, navigation }) => {
   const { partnerId } = route.params
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
@@ -57,6 +57,30 @@ export const PartnerOrdersScreen = ({ route }) => {
     fetchOrders()
   }, [partnerId])
 
+  const handleValidateOrder = async (orderId) => {
+    try {
+      setLoading(true)
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'validated' })
+        .eq('id', orderId)
+
+      if (error) throw error
+      
+      // Rafraîchir la liste des commandes
+      await fetchOrders()
+    } catch (err) {
+      console.error('Error validating order:', err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleScanQR = (orderId) => {
+    navigation.navigate('ScanQRCode', { orderId })
+  }
+
   return (
     <ScrollView
       style={styles.container}
@@ -70,7 +94,10 @@ export const PartnerOrdersScreen = ({ route }) => {
 
       {orders.map(order => (
         <Card key={order.id} style={styles.card}>
-          <Card.Title title={`Commande #${order.id}`} subtitle={`Total: ${order.total_points} points`} />
+          <Card.Title 
+            title={`Commande #${order.id}`} 
+            subtitle={`Total: ${order.total_points} points • ${order.status}`} 
+          />
           <Card.Content>
             {order.order_items.map(item => (
               <View key={item.id} style={styles.item}>
@@ -87,6 +114,27 @@ export const PartnerOrdersScreen = ({ route }) => {
                 ) : null}
               </View>
             ))}
+            
+            <View style={styles.actions}>
+              {order.status === 'pending' && (
+                <Button 
+                  mode="contained" 
+                  onPress={() => handleValidateOrder(order.id)}
+                  style={styles.button}
+                >
+                  Valider la commande
+                </Button>
+              )}
+              {order.status === 'validated' && (
+                <Button 
+                  mode="contained" 
+                  onPress={() => handleScanQR(order.id)}
+                  style={styles.button}
+                >
+                  Scanner QR Code
+                </Button>
+              )}
+            </View>
           </Card.Content>
           <Divider style={styles.divider} />
         </Card>
@@ -124,5 +172,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#666',
     marginTop: 32,
+  },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  button: {
+    flex: 1,
+    marginHorizontal: 8,
   },
 }) 

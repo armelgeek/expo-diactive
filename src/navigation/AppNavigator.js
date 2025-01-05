@@ -26,6 +26,8 @@ import { DeleteAccountScreen } from '../pages/profile/DeleteAccountScreen'
 import {InstitutesScreen}  from '../pages/social/InstitutesScreen'
 import { DonationsScreen } from '../pages/social/DonationsScreen'
 import { PartnerOrdersScreen } from '../pages/partner/PartnerOrdersScreen'
+import { QRCodeScreen } from '../pages/orders/QRCodeScreen'
+import { ScanQRScreen } from '../pages/partner/ScanQRScreen'
 
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
@@ -121,6 +123,16 @@ const ProfileStack = () => (
       name="PartnerOrders"
       component={PartnerOrdersScreen}
       options={{ title: 'Commandes reçues' }}
+    />
+    <Stack.Screen
+      name="QRCode"
+      component={QRCodeScreen}
+      options={{ title: 'Code QR' }}
+    />
+    <Stack.Screen
+      name="ScanQRCode"
+      component={ScanQRScreen}
+      options={{ title: 'Scanner QR Code' }}
     />
   </Stack.Navigator>
 )
