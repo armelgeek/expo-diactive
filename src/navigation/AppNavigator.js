@@ -21,6 +21,10 @@ import { OrdersScreen } from '../pages/partner/OrdersScreen'
 import { PartnerSettings } from '../pages/partner/PartnerSettings'
 import { CartScreen } from '../pages/marketplace/CartScreen'
 import FriendsActivityScreen from '../pages/social/FriendsActivityScreen'
+import { ChangePasswordScreen } from '../pages/profile/ChangePasswordScreen'
+import { DeleteAccountScreen } from '../pages/profile/DeleteAccountScreen'
+import {InstitutesScreen}  from '../pages/social/InstitutesScreen'
+import { DonationsScreen } from '../pages/social/DonationsScreen'
 
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
@@ -30,7 +34,6 @@ const MarketplaceStack = () => (
     <Stack.Screen 
       name="MarketplaceMain" 
       component={MarketplaceScreen}
-    
       options={{ title: 'Bons Plans' }}
     />
     <Stack.Screen 
@@ -48,7 +51,6 @@ const MarketplaceStack = () => (
       component={ReviewsScreen}
       options={{ title: 'Avis' }}
     />
-
   </Stack.Navigator>
 )
 
@@ -84,7 +86,7 @@ const ProfileStack = () => (
       component={PartnerSettings}
       options={{ title: 'Paramètres' }}
     />
-      <Stack.Screen 
+    <Stack.Screen 
       name="Cart" 
       component={CartScreen}
       options={{ title: 'Mon panier' }}
@@ -93,6 +95,26 @@ const ProfileStack = () => (
       name="FriendsActivity"
       component={FriendsActivityScreen}
       options={{ title: 'Amis et activités' }}
+    />
+    <Stack.Screen
+      name="ChangePassword"
+      component={ChangePasswordScreen}
+      options={{ title: 'Modifier le mot de passe' }}
+    />
+    <Stack.Screen
+      name="DeleteAccount"
+      component={DeleteAccountScreen}
+      options={{ title: 'Supprimer le compte' }}
+    />
+    <Stack.Screen
+      name="Institutes"
+      component={InstitutesScreen}
+      options={{ title: 'Associations' }}
+    />
+    <Stack.Screen
+      name="Donations"
+      component={DonationsScreen}
+      options={{ title: 'Mes dons' }}
     />
   </Stack.Navigator>
 )

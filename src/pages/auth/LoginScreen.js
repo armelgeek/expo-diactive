@@ -25,7 +25,7 @@ export default function LoginScreen({ navigation }) {
   }
 
   return (
-    <AuthTemplate title="DevBlock">
+    <AuthTemplate title="Diactive">
       <LoginForm
         email={email}
         setEmail={setEmail}
@@ -39,6 +39,11 @@ export default function LoginScreen({ navigation }) {
         title="S'inscrire"
         type="clear"
         onPress={() => navigation.navigate('Register')}
+      />
+      <Button
+        title="Mot de passe oublié ?"
+        type="clear"
+        onPress={() => navigation.navigate('ForgotPassword')}
       />
     </AuthTemplate>
   )

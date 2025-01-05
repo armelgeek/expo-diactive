@@ -4,7 +4,7 @@ import { Text, Card, Button, List, Searchbar, Divider } from 'react-native-paper
 import * as Contacts from 'expo-contacts'
 import { supabase } from '../../services/supabase'
 
-export default function SocialScreen() {
+export default function SocialScreen({navigation}) {
   const [loading, setLoading] = useState(false)
   const [contacts, setContacts] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -109,7 +109,7 @@ export default function SocialScreen() {
 
   // Charger les contacts au démarrage
   useEffect(() => {
-    loadContacts()
+  //  loadContacts()
   }, [loadContacts])
 
   // Filtrer les contacts selon la recherche
@@ -188,6 +188,22 @@ export default function SocialScreen() {
           }
         </List.Section>
       </ScrollView>
+
+      <Button
+        mode="contained"
+        onPress={() => navigation.navigate('Profile' , {screen: 'Institutes'})}
+        style={styles.button}
+      >
+        Faire un don
+      </Button>
+
+      <Button
+        mode="outlined"
+        onPress={() => navigation.navigate('Profile' , {screen: 'Donations'})}
+        style={styles.button}
+      >
+        Voir mes dons
+      </Button>
     </View>
   )
 }
@@ -202,6 +218,9 @@ const styles = StyleSheet.create({
   },
   error: {
     color: '#ff190c',
+    margin: 16,
+  },
+  button: {
     margin: 16,
   },
 }) 

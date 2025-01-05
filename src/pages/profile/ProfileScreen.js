@@ -10,10 +10,14 @@ import { AdminGivePointsModal } from '../../molecules/AdminGivePointsModal'
 import { useNavigation } from '@react-navigation/native'
 import { Button as PaperButton } from 'react-native-paper'
 import { CustomText } from '../../molecules/CustomText'
+import * as ImagePicker from 'expo-image-picker'
+import { TextInput } from 'react-native-paper'
 import { PartnerSection } from './components/PartnerSection'
+import { ChangePasswordScreen } from './ChangePasswordScreen'
+import { DeleteAccountScreen } from './DeleteAccountScreen'
 
 export default function ProfileScreen() {
-  const { points, cumulativePoints, loading, refreshData, weeklyStats } = useSteps()
+  const { points, cumulativePoints, loading: loadingSteps, refreshData, weeklyStats } = useSteps()
   const { isPartner, checkPartnerStatus } = usePartner()
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -27,7 +31,15 @@ export default function ProfileScreen() {
   const [showAdminGivePoints, setShowAdminGivePoints] = useState(false)
   const [isAdmin, setIsAdmin] = useState(true)
   const navigation = useNavigation();
-
+  const [editMode, setEditMode] = useState(loadingSteps || false)
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    avatar_url: ''
+  })
   const fetchProfile = async () => {
     try {
       const { data: { user: currentUser } } = await supabase.auth.getUser()
@@ -42,6 +54,12 @@ export default function ProfileScreen() {
 
       if (error) throw error
       setProfile(data)
+      setFormData({
+        full_name: data.full_name || '',
+        email: data.email || '',
+        phone: data.phone || '',
+        avatar_url: data.avatar_url || ''
+      })
     } catch (err) {
       console.error('Erreur lors de la récupération du profil:', err)
     }
@@ -226,6 +244,79 @@ export default function ProfileScreen() {
       setLoadingFriends(false)
     }
   }
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      })
+
+      if (!result.canceled) {
+        const file = result.assets[0]
+        const fileExt = file.uri.substring(file.uri.lastIndexOf('.') + 1)
+        const fileName = `${Math.random()}.${fileExt}`
+        const filePath = `${profile.id}/${fileName}`
+
+        // Uploader l'image
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, {
+            uri: file.uri,
+            type: `image/${fileExt}`,
+            name: fileName,
+          })
+
+        if (uploadError) throw uploadError
+
+        // Mettre à jour l'URL de l'avatar
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath)
+
+        setFormData(prev => ({ ...prev, avatar_url: publicUrl }))
+      }
+    } catch (err) {
+      console.error('Error uploading image:', err)
+      setError(err.message)
+    }
+  }
+
+  // Sauvegarder les modifications
+  const handleSave = async () => {
+    try {
+      setLoading(true)
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: formData.full_name,
+          phone: formData.phone,
+          avatar_url: formData.avatar_url,
+          updated_at: new Date()
+        })
+        .eq('id', profile.id)
+
+      if (error) throw error
+
+      // Mettre à jour l'email si nécessaire
+      if (formData.email !== profile.email) {
+        const { error: emailError } = await supabase.auth.updateUser({
+          email: formData.email
+        })
+        if (emailError) throw emailError
+      }
+
+      await fetchProfile()
+      setEditMode(false)
+    } catch (err) {
+      console.error('Error updating profile:', err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
 
   const handleSignOut = async () => {
     try {
@@ -300,12 +391,71 @@ export default function ProfileScreen() {
             icon={{ name: 'user', type: 'font-awesome' }}
             containerStyle={styles.avatar}
           />
+          {editMode && (
+              <PaperButton onPress={pickImage} style={styles.changeAvatarButton}>
+                Changer la photo
+              </PaperButton>
+            )}
+        </View>
+        {editMode ? (
+            <View style={styles.form}>
+              <TextInput
+                label="Nom complet"
+                value={formData.full_name}
+                onChangeText={text => setFormData(prev => ({ ...prev, full_name: text }))}
+                mode="outlined"
+                style={styles.input}
+              />
+              <TextInput
+                label="Email"
+                value={formData.email}
+                onChangeText={text => setFormData(prev => ({ ...prev, email: text }))}
+                mode="outlined"
+                style={styles.input}
+                keyboardType="email-address"
+              />
+              <TextInput
+                label="Téléphone"
+                value={formData.phone}
+                onChangeText={text => setFormData(prev => ({ ...prev, phone: text }))}
+                mode="outlined"
+                style={styles.input}
+                keyboardType="phone-pad"
+              />
+              <View style={styles.buttonContainer}>
+                <PaperButton
+                  mode="contained"
+                  onPress={handleSave}
+                  loading={loading}
+                  style={styles.button}
+                >
+                  Enregistrer
+                </PaperButton>
+                <PaperButton
+                  mode="outlined"
+                  onPress={() => setEditMode(false)}
+                  style={styles.button}
+                >
+                  Annuler
+                </PaperButton>
+              </View>
+            </View>
+          ) : (
           <View style={styles.userInfo}>
             <Text h4>{profile?.full_name || user?.email}</Text>
             <Text style={styles.email}>{user?.email}</Text>
+            <PaperButton
+                mode="contained"
+                onPress={() => setEditMode(true)}
+                style={styles.editButton}
+              >
+                Modifier le profil
+          </PaperButton>
           </View>
-        </View>
+        )}
+         
       </Card>
+
 
       <Card containerStyle={styles.statsCard}>
         <Card.Title>Points et Statistiques</Card.Title>
@@ -421,7 +571,7 @@ export default function ProfileScreen() {
           title="Voir mes commandes"
           type="outline"
           icon={<Icon name="list" type="font-awesome" size={15} color="#2089dc" style={{ marginRight: 10 }} />}
-          onPress={() => navigation.navigate('Profile', { screen: 'Orders' })}
+          onPress={() => navigation.navigate('Orders')}
           containerStyle={styles.button}
         />
         <Button
@@ -442,6 +592,17 @@ export default function ProfileScreen() {
           onPress={handleSignOut}
           containerStyle={styles.button}
           buttonStyle={styles.signOutButton}
+        />
+        <Button
+          title="Modifier le mot de passe"
+          onPress={() => navigation.navigate('ChangePassword')}
+          containerStyle={styles.button}
+        />
+        <Button
+          title="Supprimer mon compte"
+          onPress={() => navigation.navigate('DeleteAccount')}
+          containerStyle={styles.button}
+          buttonStyle={styles.deleteButton}
         />
       </Card>
 
@@ -516,7 +677,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   avatarContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     padding: 10,
   },
@@ -632,6 +793,41 @@ const styles = StyleSheet.create({
   },
   overlayButton: {
     width: '45%',
+  },
+  changeAvatarButton: {
+    marginTop: 8,
+  },
+  form: {
+    marginTop: 16,
+  },
+  input: {
+    marginBottom: 16,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  button: {
+    flex: 1,
+    marginHorizontal: 8,
+  },
+  name: {
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  email: {
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 4,
+  },
+  phone: {
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 16,
+  },
+  editButton: {
+    marginTop: 16,
   },
   ...additionalStyles,
 }) 

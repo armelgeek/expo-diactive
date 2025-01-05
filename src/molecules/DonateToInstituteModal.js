@@ -1,16 +1,17 @@
 import React, { useState } from 'react'
-import { View, StyleSheet } from 'react-native'
-import { Text, Card, Button, Input } from 'react-native-elements'
+import { View,Modal, StyleSheet } from 'react-native'
+import { Text, Button, Input } from 'react-native-elements'
 import { useSteps } from '../hooks/useSteps'
 import { supabase } from '../services/supabase'
 import { CustomOverlay } from './CustomOverlay'
 
-export const DonateToInstituteModal = ({
+const DonateToInstituteModal = ({
   isVisible,
   onClose,
   institute,
   maxPoints,
 }) => {
+  console.log('institute', institute)
   const [points, setPoints] = useState('')
   const [loading, setLoading] = useState(false)
   const { refreshData } = useSteps()
@@ -51,8 +52,10 @@ export const DonateToInstituteModal = ({
       if (donationError) throw donationError
 
       alert('Don effectué avec succès !')
+   
       await refreshData()
       onClose()
+      setPoints('');
     } catch (error) {
       alert(error.message)
     } finally {
@@ -64,28 +67,25 @@ export const DonateToInstituteModal = ({
   const isValid = !isNaN(pointsValue) && pointsValue > 0 && pointsValue <= maxPoints
 
   return (
-    <CustomOverlay
-      isVisible={isVisible}
-      onBackdropPress={onClose}
-    >
+    <CustomOverlay visible={isVisible} onBackdropPress={onClose}>
       <View style={styles.container}>
         <Text h4 style={styles.title}>Faire un don à {institute?.name}</Text>
         
         <View style={styles.progressContainer}>
           <View style={styles.progressInfo}>
             <Text>Objectif : {institute?.points_goal?.toLocaleString()} points</Text>
-            <Text>Actuel : {institute?.current_points?.toLocaleString()} points</Text>
+            <Text>Actuel : {institute?.total_donations?.toLocaleString()} points</Text>
           </View>
           <View style={styles.progressBarContainer}>
             <View 
               style={[
                 styles.progressBar, 
-                { width: `${Math.min((institute?.current_points / institute?.points_goal) * 100, 100)}%` }
+                { width: `${Math.min((institute?.total_donations / institute?.points_goal) * 100, 100)}%` }
               ]} 
             />
           </View>
           <Text style={styles.remainingPoints}>
-            Reste à atteindre : {(institute?.points_goal - institute?.current_points)?.toLocaleString()} points
+            Reste à atteindre : {(institute?.points_goal - institute?.total_donations)?.toLocaleString()} points
           </Text>
         </View>
 
@@ -124,7 +124,7 @@ export const DonateToInstituteModal = ({
     </CustomOverlay>
   )
 }
-
+export default DonateToInstituteModal;
 const styles = StyleSheet.create({
   container: {
     width: '100%',
