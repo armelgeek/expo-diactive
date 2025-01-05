@@ -1,20 +1,44 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react'
+import { NavigationContainer } from '@react-navigation/native'
+import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import { useAuth } from './src/hooks/useAuth'
+
+// Navigation
+import AppNavigator from './src/navigation/AppNavigator'
+
+// Auth screens
+import LoginScreen from './src/pages/auth/LoginScreen'
+import RegisterScreen from './src/pages/auth/RegisterScreen'
+import ForgotPasswordScreen from './src/pages/auth/ForgotPasswordScreen'
+import { CartProvider } from './src/contexts/CartContext'
+import { PaperProvider } from 'react-native-paper'
+
+const Stack = createNativeStackNavigator()
 
 export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
-}
+  const { user, loading } = useAuth()
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+  if (loading) {
+    return null // Ou un écran de chargement
+  }
+
+  return (
+    <PaperProvider>
+    <CartProvider>
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {user ? (
+          <Stack.Screen name="Main" component={AppNavigator} />
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+    </CartProvider>
+    </PaperProvider>
+  )
+} 

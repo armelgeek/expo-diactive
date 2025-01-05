@@ -1,0 +1,2 @@
+INSERT INTO storage.buckets (id, name) VALUES ('public', 'Public Storage');
+CREATE POLICY "Images accessibles publiquement" ON storage.objects FOR SELECT USING (bucket_id = 'public');
