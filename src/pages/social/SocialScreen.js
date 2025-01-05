@@ -109,7 +109,7 @@ export default function SocialScreen({navigation}) {
 
   // Charger les contacts au démarrage
   useEffect(() => {
-  //  loadContacts()
+    loadContacts()
   }, [loadContacts])
 
   // Filtrer les contacts selon la recherche

@@ -36,7 +36,12 @@ export const PartnerDetailsScreen = ({ route, navigation }) => {
   }, [partner.id])
 
   const handleProductPress = (product) => {
-    navigation.navigate('ProductDetails', { product })
+    const formattedProduct = {
+      ...product,
+      points_cost: product.points_price,
+      type: 'product'
+    }
+    navigation.navigate('ProductDetails', { product: formattedProduct })
   }
 
   return (
@@ -77,6 +82,7 @@ export const PartnerDetailsScreen = ({ route, navigation }) => {
             description={product.description}
             price={`${product.points_price} points`}
             imageUrl={product.image_url}
+            stock={product.stock}
             onPress={() => handleProductPress(product)}
           />
         ))}

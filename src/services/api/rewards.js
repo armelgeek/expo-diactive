@@ -54,13 +54,12 @@ export const rewardsApi = {
     try {
       const { data, error } = await supabase
         .from('rewards')
-
         .select('*')
         .gt('stock', 0)
         .order('points_cost', { ascending: true })
-
       if (error) throw error
-      return (data || []).map(mapRewardFromDB).filter(Boolean)
+    
+      return (data || []).map(mapRewardFromDB)
     } catch (error) {
       console.error('Error fetching rewards:', error)
       throw error

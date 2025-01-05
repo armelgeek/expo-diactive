@@ -9,10 +9,21 @@ export const ProductDetailsScreen = ({ route, navigation }) => {
   const theme = useTheme()
   const [snackbarVisible, setSnackbarVisible] = React.useState(false)
   const { addToCart, error: cartError } = useCartContext()
+  
+  // État pour la quantité
+  const [quantity, setQuantity] = React.useState(1)
 
   const handleAddToCart = () => {
-    addToCart(product, 'product')
+    addToCart({...product, point_cost: product.points_price}, 'product', quantity) // Passer la quantité
     setSnackbarVisible(true)
+  }
+
+  const incrementQuantity = () => {
+    setQuantity(prev => prev + 1)
+  }
+
+  const decrementQuantity = () => {
+    setQuantity(prev => (prev > 1 ? prev - 1 : 1)) // Ne pas descendre en dessous de 1
   }
 
   return (
@@ -32,7 +43,7 @@ export const ProductDetailsScreen = ({ route, navigation }) => {
 
           <View style={styles.priceContainer}>
             <Text variant="headlineSmall" style={styles.price}>
-              {product.price} points
+              {product.points_cost} points
             </Text>
             <MaterialCommunityIcons 
               name="star" 
@@ -77,7 +88,17 @@ export const ProductDetailsScreen = ({ route, navigation }) => {
               </Card.Content>
             </Card>
           )}
-
+          
+          {/**<View style={styles.quantityContainer}>
+            <Button mode="outlined" onPress={decrementQuantity} style={styles.quantityButton}>
+              -
+            </Button>
+            <Text style={styles.quantityText}>{quantity}</Text>
+            <Button mode="outlined" onPress={incrementQuantity} style={styles.quantityButton}>
+              +
+            </Button>
+          </View>
+*       */}
           <Button
             mode="contained"
             style={styles.button}
@@ -85,7 +106,7 @@ export const ProductDetailsScreen = ({ route, navigation }) => {
             labelStyle={styles.buttonLabel}
             onPress={handleAddToCart}
           >
-            Ajouter au panier • {product.price} points
+            Ajouter au panier • {product.points_cost * quantity} points
           </Button>
         </View>
       </ScrollView>
@@ -150,5 +171,17 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     fontSize: 16,
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  quantityButton: {
+    width: 40,
+  },
+  quantityText: {
+    marginHorizontal: 16,
+    fontSize: 18,
   },
 }) 

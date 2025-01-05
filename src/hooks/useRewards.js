@@ -13,7 +13,7 @@ export const useRewards = () => {
       setLoading(true)
       setError(null)
       const data = await rewardsApi.fetchAvailableRewards()
-      console.log('data', data)
+
       const mappedData = data.map(item => ({
         id: item.id,
         title: item.title,

@@ -8,6 +8,7 @@ export const ProductCard = ({
   description,
   price,
   imageUrl,
+  stock,
   onPress
 }) => {
   return (
@@ -35,6 +36,9 @@ export const ProductCard = ({
             color="#2196F3" 
           />
         </View>
+        <Text variant="bodySmall" numberOfLines={2} style={styles.stock}>
+          {stock} en stock
+        </Text>
         <Button 
           mode="contained" 
           onPress={onPress}
