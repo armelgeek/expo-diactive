@@ -127,7 +127,12 @@ export default function FriendsActivityScreen() {
           points,
           status,
           created_at,
-          sender:profiles (
+          sender:profiles!point_shares_sender_id_fkey (
+            id,
+            full_name,
+            email
+          ),
+          receiver:profiles!point_shares_receiver_id_fkey (
             id,
             full_name,
             email

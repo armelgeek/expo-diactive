@@ -60,7 +60,7 @@ export default function SocialScreen() {
   // Inviter un contact par SMS
   const inviteContact = useCallback(async (contact) => {
     try {
-      const message = 'Rejoins-moi sur DiActive ! Une super app pour gagner des points en marchant et les échanger contre des récompenses.'
+      const message = 'Rejoins-nous sur DiActive ! Une super app pour gagner des points en marchant et les échanger contre des récompenses.'
       const phoneNumber = contact.phoneNumber
       
       // Construire l'URL pour le SMS
