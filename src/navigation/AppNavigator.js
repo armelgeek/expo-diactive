@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { Icon } from 'react-native-elements'
 
 // Screens
+import HomeScreen from '../pages/home/HomeScreen'
 import DashboardScreen from '../pages/dashboard/DashboardScreen'
 import { RewardsScreen } from '../pages/rewards/RewardsScreen'
 import { DealsScreen } from '../pages/deals/DealsScreen'
@@ -125,6 +126,9 @@ export default function AppNavigator() {
             case 'Deals':
               iconName = 'tag'
               break
+            case 'Cart':
+              iconName = 'cart'
+              break
             default:
               iconName = 'circle'
           }
@@ -144,7 +148,7 @@ export default function AppNavigator() {
     >
       <Tab.Screen 
         name="Dashboard" 
-        component={DashboardScreen}
+        component={HomeScreen}
         options={{ title: 'Accueil' }}
       />
       <Tab.Screen 
@@ -166,6 +170,11 @@ export default function AppNavigator() {
         name="Profile" 
         component={ProfileStack}
         options={{ headerShown: false }}
+      />
+      <Tab.Screen 
+        name="Cart" 
+        component={CartScreen}
+        options={{ title: 'Mon Panier' }}
       />
     </Tab.Navigator>
   )
