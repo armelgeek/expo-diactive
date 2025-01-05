@@ -25,6 +25,7 @@ import { ChangePasswordScreen } from '../pages/profile/ChangePasswordScreen'
 import { DeleteAccountScreen } from '../pages/profile/DeleteAccountScreen'
 import {InstitutesScreen}  from '../pages/social/InstitutesScreen'
 import { DonationsScreen } from '../pages/social/DonationsScreen'
+import { PartnerOrdersScreen } from '../pages/partner/PartnerOrdersScreen'
 
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
@@ -115,6 +116,11 @@ const ProfileStack = () => (
       name="Donations"
       component={DonationsScreen}
       options={{ title: 'Mes dons' }}
+    />
+    <Stack.Screen
+      name="PartnerOrders"
+      component={PartnerOrdersScreen}
+      options={{ title: 'Commandes reçues' }}
     />
   </Stack.Navigator>
 )

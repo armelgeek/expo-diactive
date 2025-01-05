@@ -52,27 +52,6 @@ export const PartnerDashboard = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       fetchDashboardData()
-
-      // Écouter les changements en temps réel
-      const channel = supabase
-        .channel('dashboard_updates')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'reward_orders',
-            filter: `items.reward.partner_id=eq.${profile?.id}`
-          },
-          () => {
-            fetchDashboardData()
-          }
-        )
-        .subscribe()
-
-      return () => {
-        supabase.removeChannel(channel)
-      }
     }, [fetchDashboardData, profile?.id])
   )
 
@@ -179,7 +158,7 @@ export const PartnerDashboard = ({ navigation }) => {
         <Button
           mode="contained"
           icon="package-variant"
-          onPress={() => navigation.navigate('Orders')}
+          onPress={() => navigation.navigate('Profile',{screen: 'PartnerOrders', params: {partnerId: profile.id}})}
           style={styles.actionButton}
         >
           Voir les commandes

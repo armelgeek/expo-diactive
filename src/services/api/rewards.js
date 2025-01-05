@@ -192,5 +192,38 @@ export const rewardsApi = {
       console.error('Error cancelling order:', error)
       throw error
     }
+  },
+
+  // Récupérer les commandes d'un partenaire
+  async fetchPartnerOrders(partnerId) {
+    try {
+      const { data, error } = await supabase
+        .from('reward_orders')
+        .select(`
+          id,
+          created_at,
+          status,
+          total_points,
+          reward_order_items!inner (
+            id,
+            quantity,
+            points_cost,
+            reward:rewards (
+              id,
+              title,
+              description,
+              image_url
+            )
+          )
+        `)
+        .eq('partner_id', partnerId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error fetching partner orders:', error)
+      throw error
+    }
   }
 } 
