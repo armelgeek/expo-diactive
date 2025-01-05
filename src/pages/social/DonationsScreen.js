@@ -22,7 +22,7 @@ export const DonationsScreen = () => {
           created_at,
           institute:institutes (
             name,
-            image_url
+            logo_url
           )
         `)
         .eq('user_id', user.id)
@@ -32,7 +32,8 @@ export const DonationsScreen = () => {
       setDonations(data || [])
     const mappedDonations = data.map(donation => ({
       ...donation,
-      amount: donation.points_amount
+      amount: donation.points_amount,
+      image_url: donation.institute.logo_url
     }))
     setDonations(mappedDonations)
     } catch (err) {
