@@ -20,6 +20,7 @@
     "date-fns": "^4.1.0",
     "expo": "~52.0.23",
     "expo-barcode-scanner": "^13.0.1",
+    "expo-camera": "~16.0.10",
     "expo-contacts": "^14.0.2",
     "expo-image-picker": "^16.0.3",
     "expo-location": "^18.0.4",

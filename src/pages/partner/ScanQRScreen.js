@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Text, Button } from 'react-native-paper'
-import { BarCodeScanner } from 'expo-barcode-scanner'
+import { Camera } from 'expo-camera'
 import { supabase } from '../../services/supabase'
 
-export const ScanQRScreen = ({ route, navigation }) => {
+const ScanQRScreen = ({ route, navigation }) => {
   const [hasPermission, setHasPermission] = useState(null)
   const [scanned, setScanned] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     (async () => {
-      const { status } = await BarCodeScanner.requestPermissionsAsync()
+      const { status } = await Camera.requestCameraPermissionsAsync()
       setHasPermission(status === 'granted')
     })()
   }, [])
@@ -47,7 +47,7 @@ export const ScanQRScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <BarCodeScanner
+      <Camera
         onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
         style={StyleSheet.absoluteFillObject}
       />
@@ -66,7 +66,7 @@ export const ScanQRScreen = ({ route, navigation }) => {
     </View>
   )
 }
-
+export default ScanQRScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,

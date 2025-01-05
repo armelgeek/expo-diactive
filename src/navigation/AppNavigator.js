@@ -17,7 +17,7 @@ import ReviewsScreen from '../pages/reviews/ReviewsScreen'
 import { CreatePartnerScreen } from '../pages/partner/CreatePartnerScreen'
 import { PartnerDashboard } from '../pages/partner/PartnerDashboard'
 import { ManageRewards } from '../pages/partner/ManageRewards'
-import { OrdersScreen } from '../pages/partner/OrdersScreen'
+import { OrdersScreen } from '../pages/orders/OrdersScreen'
 import { PartnerSettings } from '../pages/partner/PartnerSettings'
 import { CartScreen } from '../pages/marketplace/CartScreen'
 import FriendsActivityScreen from '../pages/social/FriendsActivityScreen'
@@ -27,7 +27,7 @@ import {InstitutesScreen}  from '../pages/social/InstitutesScreen'
 import { DonationsScreen } from '../pages/social/DonationsScreen'
 import { PartnerOrdersScreen } from '../pages/partner/PartnerOrdersScreen'
 import { QRCodeScreen } from '../pages/orders/QRCodeScreen'
-import { ScanQRScreen } from '../pages/partner/ScanQRScreen'
+import ScanQRScreen from '../pages/partner/ScanQRScreen'
 
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
