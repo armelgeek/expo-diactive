@@ -36,7 +36,7 @@ export const useCart = () => {
         points_cost: item.price || item.points_cost,
         partner_id: item.partner_id,
         quantity: 1,
-        stock: item.stock,
+        stock: item.stock || item.points_price,
         imageUrl: item.image_url
       }]
     })

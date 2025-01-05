@@ -24,7 +24,7 @@ export default function MarketplaceScreen({ navigation }) {
     fetchPartnerProducts,
   } = useMarketplace()
   const { items, addToCart, error: cartError } = useCartContext()
-
+  console.log('products', products);
   const handleCategoryPress = async (category) => {
     setSelectedCategory(category)
     setSelectedPartner(null)

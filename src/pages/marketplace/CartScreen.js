@@ -19,7 +19,7 @@ export const CartScreen = ({ navigation }) => {
   const handleCheckout = async () => {
     try {
       await checkout()
-      navigation.navigate('Orders')
+      navigation.navigate('Profile', { screen: 'Orders' })
     } catch (err) {
       // L'erreur est déjà gérée dans le hook
     }

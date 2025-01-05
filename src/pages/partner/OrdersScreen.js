@@ -1,110 +1,98 @@
-import React, { useState, useCallback } from 'react'
-import { View, StyleSheet } from 'react-native'
-import { ActivityIndicator, Text } from 'react-native-paper'
-import { useFocusEffect } from '@react-navigation/native'
+import React, { useState, useEffect } from 'react'
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native'
+import { Text, Card, Button } from 'react-native-paper'
 import { supabase } from '../../services/supabase'
-import { usePartner } from '../../hooks/usePartner'
-import { OrdersList } from './components/OrdersList'
 
 export const OrdersScreen = () => {
-  const { profile } = usePartner()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
-  const fetchOrders = useCallback(async () => {
-    if (!profile?.id) return
-
+  const fetchOrders = async () => {
     try {
       setLoading(true)
-      setError(null)
-
-      const { data, error } = await supabase
-        .from('reward_orders')
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: orders, error } = await supabase
+        .from('orders')
         .select(`
           id,
-          created_at,
+          status,
           total_points,
-          user:user_id (
-            email,
-            full_name
+          created_at,
+          partner:partners (
+            id,
+            company_name
           ),
-          items:reward_order_items (
+          order_items (
             id,
             quantity,
             points_cost,
-            reward:reward_id (
+            reward:rewards (
               id,
-              title
+              title,
+              image_url
+            ),
+            product:products (
+              id,
+              title,
+              image_url
             )
           )
         `)
-        .eq('items.reward.partner_id', profile.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-
+  
       if (error) throw error
-
-      setOrders(data || [])
+      setOrders(orders || [])
     } catch (err) {
       console.error('Error fetching orders:', err)
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [profile?.id])
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchOrders()
-
-      // Écouter les changements en temps réel
-      const channel = supabase
-        .channel('orders_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'reward_orders',
-            filter: `items.reward.partner_id=eq.${profile?.id}`
-          },
-          () => {
-            fetchOrders()
-          }
-        )
-        .subscribe()
-
-      return () => {
-        supabase.removeChannel(channel)
-      }
-    }, [fetchOrders, profile?.id])
+  }
+    useEffect(() => {
+    fetchOrders()
+  }, [])
+  console.log('orders', orders)
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={fetchOrders} />
+        }
+      >
+        {orders.map(order => (
+          <Card key={order.id} style={styles.card}>
+            <Card.Content>
+              <Text variant="titleMedium">
+                Commande #{order.id.slice(0, 8)}
+              </Text>
+              <Text variant="bodyMedium">
+                Statut: {order.status}
+              </Text>
+              <Text variant="bodyMedium">
+                Total: {order.total_points} points
+              </Text>
+              {/* Afficher les éléments de la commande */}
+              {order.order_items.map(item => (
+                <View key={item.id} style={styles.itemContainer}>
+                  <Text>
+                    {item.reward?.title || item.product?.title} x{item.quantity}
+                  </Text>
+                  <Text>{item.points_cost} points</Text>
+                </View>
+              ))}
+            <View style={styles.partnerInfoContainer}>
+              <Text variant="titleMedium">Partenaire: {order.partner.company_name}</Text>
+            </View>
+            </Card.Content>
+          </Card>
+        ))}
+      </ScrollView>
+    </View>
   )
-
-  if (!profile) {
-    return (
-      <View style={styles.container}>
-        <Text>Vous devez être partenaire pour accéder à cette page</Text>
-      </View>
-    )
-  }
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" />
-      </View>
-    )
-  }
-
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.error}>Une erreur est survenue: {error}</Text>
-      </View>
-    )
-  }
-
-  return <OrdersList orders={orders} />
 }
 
 const styles = StyleSheet.create({

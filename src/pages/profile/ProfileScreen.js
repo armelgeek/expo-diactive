@@ -421,7 +421,7 @@ export default function ProfileScreen() {
           title="Voir mes commandes"
           type="outline"
           icon={<Icon name="list" type="font-awesome" size={15} color="#2089dc" style={{ marginRight: 10 }} />}
-          onPress={() => navigation.navigate('Orders')}
+          onPress={() => navigation.navigate('Profile', { screen: 'Orders' })}
           containerStyle={styles.button}
         />
         <Button
