@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { contactsApi } from '../services/api/contacts'
+import { user as userService } from '../services/api/user'
 import { supabase } from '../services/supabase'
 
 export const useContacts = () => {
@@ -10,7 +11,7 @@ export const useContacts = () => {
   const fetchContacts = useCallback(async () => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await userService.getUser()
       if (!user) throw new Error('Non authentifié')
 
       const data = await contactsApi.fetchContacts(user.id)
@@ -25,7 +26,7 @@ export const useContacts = () => {
   const fetchInvitations = useCallback(async () => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await userService.getUser()
       if (!user) throw new Error('Non authentifié')
 
       const data = await contactsApi.fetchInvitations(user.id)
@@ -40,7 +41,7 @@ export const useContacts = () => {
   const addContact = useCallback(async (contact) => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await userService.getUser()
       if (!user) throw new Error('Non authentifié')
 
       await contactsApi.addContact(user.id, contact)
@@ -56,7 +57,7 @@ export const useContacts = () => {
   const inviteContacts = useCallback(async (selectedContacts) => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await userService.getUser()
       if (!user) throw new Error('Non authentifié')
 
       await contactsApi.inviteContacts(user.id, selectedContacts)

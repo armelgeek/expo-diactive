@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { friendsApi } from '../services/api/friends'
 import { supabase } from '../services/supabase'
+import { user as userService } from '../services/api/user'
 
 export const useFriends = () => {
   const [loading, setLoading] = useState(false)
@@ -10,7 +11,7 @@ export const useFriends = () => {
   const fetchFriends = useCallback(async () => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await userService.getUser()
       if (!user) throw new Error('Non authentifié')
 
       const data = await friendsApi.fetchFriends(user.id)
@@ -25,7 +26,7 @@ export const useFriends = () => {
   const fetchReceivedRequests = useCallback(async () => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await userService.getUser()
       if (!user) throw new Error('Non authentifié')
 
       const data = await friendsApi.fetchReceivedRequests(user.id)
@@ -40,7 +41,7 @@ export const useFriends = () => {
   const sendFriendRequest = useCallback(async (receiverEmail) => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await userService.getUser()
       if (!user) throw new Error('Non authentifié')
 
       await friendsApi.sendFriendRequest(user.id, receiverEmail)
@@ -55,7 +56,7 @@ export const useFriends = () => {
   const acceptFriendRequest = useCallback(async (requestId) => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await userService.getUser()
       if (!user) throw new Error('Non authentifié')
 
       await friendsApi.acceptFriendRequest(requestId, user.id)

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { supabase } from '../services/supabase'
+import { deals as dealsService } from '../services/api/deals'
 
 export const useDeals = () => {
   const [loading, setLoading] = useState(false)
@@ -11,22 +11,8 @@ export const useDeals = () => {
       setLoading(true)
       setError(null)
 
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          partner:partners (
-            id,
-            company_name,
-            logo_url
-          )
-        `)
-        .gt('stock', 0)
-        .order('points_cost', { ascending: true })
-
-      if (error) throw error
-
-      setDeals(data || [])
+      const data = await dealsService.fetchDeals()
+      setDeals(data)
     } catch (err) {
       console.error('Error fetching deals:', err)
       setError(err.message)
