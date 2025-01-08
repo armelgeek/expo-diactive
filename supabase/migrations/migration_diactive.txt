@@ -1,0 +1,712 @@
+CREATE TABLE otp_codes (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) NOT NULL,
+  otp VARCHAR(4) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE commande
+ADD COLUMN type VARCHAR(50),
+ADD COLUMN status VARCHAR(50),
+ADD COLUMN completed_at TIMESTAMP,
+ADD COLUMN total_points INTEGER;
+
+
+CREATE TABLE command_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    commande_id UUID REFERENCES commande(id),
+    reward_id UUID REFERENCES reward(id),
+    product_id UUID REFERENCES product(id),
+    quantite INTEGER NOT NULL,
+    point_cost INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add timestamp trigger
+CREATE TRIGGER set_timestamp
+    BEFORE UPDATE ON command_items
+    FOR EACH ROW
+    EXECUTE FUNCTION set_timestamp();
+
+
+
+// il faut enlver l'attribut available de la table product
+- photo,description
+
+title -> labels
+points_price -> price
+description -> description
+image_url -> photo
+stock -> quantity
+
+
+reward
+manque: stock, partner_id
+
+ALTER TABLE reward
+ADD COLUMN stock INTEGER DEFAULT 0,
+ADD COLUMN partner_id UUID REFERENCES partner(id);
+
+profile:
+ALTER TABLE profile
+ADD COLUMN email VARCHAR(255) UNIQUE;
+
+ALTER TABLE partner
+ADD COLUMN user_id UUID,
+ADD COLUMN website_url VARCHAR(255),
+ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+
+
+ALTER TABLE category
+ADD COLUMN description TEXT
+
+
+ALTER TABLE daily_points
+ADD COLUMN steps_count INTEGER DEFAULT 0,
+ADD COLUMN note TEXT;
+
+
+Functions
+
+CREATE OR REPLACE FUNCTION admin_give_points(
+    target_user_id UUID,
+    points INTEGER,
+    reason TEXT
+) RETURNS void
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    today DATE := CURRENT_DATE;
+BEGIN
+    -- Insert or update points for today
+    INSERT INTO daily_points (
+        user_id,
+        date,
+        points,
+        steps_count,
+        note
+    ) VALUES (
+        target_user_id,
+        today,
+        points,
+        0,  -- No steps for admin points
+        reason
+    )
+    ON CONFLICT (user_id, date) DO UPDATE
+    SET
+        points = daily_points.points + EXCLUDED.points,
+        note = CASE
+            WHEN daily_points.note IS NULL THEN reason
+            ELSE daily_points.note || ' + ' || reason
+        END;
+
+    -- Update cumulative points in profile
+    UPDATE profile
+    SET points = (
+        SELECT COALESCE(SUM(points), 0)
+        FROM daily_points
+        WHERE user_id = target_user_id
+    )
+    WHERE user_id = target_user_id;
+
+    -- Notify interface refresh
+    PERFORM pg_notify(
+        'points_updated',
+        json_build_object(
+            'user_id', target_user_id,
+            'points_added', points,
+            'reason', reason
+        )::text
+    );
+END;
+$$;
+
+
+
+
+
+-- Function to calculate total points for a user
+CREATE OR REPLACE FUNCTION calculate_total_points(user_uuid UUID)
+RETURNS INTEGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN COALESCE((
+        SELECT SUM(points)
+        FROM daily_points
+        WHERE user_id = user_uuid
+    ), 0);
+END;
+$$;
+
+-- Function to update points in profile
+CREATE OR REPLACE FUNCTION update_profile_points(user_uuid UUID)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE profile
+    SET points = calculate_total_points(user_uuid)
+    WHERE user_id = user_uuid;
+END;
+$$;
+
+-- Trigger for points update
+CREATE OR REPLACE FUNCTION points_update_trigger()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    PERFORM update_profile_points(NEW.user_id);
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger on daily_points
+DROP TRIGGER IF EXISTS points_update ON daily_points;
+CREATE TRIGGER points_update
+    AFTER INSERT OR UPDATE OR DELETE ON daily_points
+    FOR EACH ROW
+    EXECUTE FUNCTION points_update_trigger();
+
+
+
+
+CREATE OR REPLACE FUNCTION check_and_update_reward_stock()
+RETURNS TRIGGER
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    current_stock INTEGER;
+BEGIN
+    -- Check current stock
+    SELECT stock INTO current_stock
+    FROM reward
+    WHERE id = NEW.reward_id;
+
+    IF current_stock < NEW.nombre THEN
+        RAISE EXCEPTION 'Insufficient stock for reward %', NEW.reward_id;
+    END IF;
+
+    -- Update stock
+    UPDATE reward
+    SET stock = stock - NEW.nombre
+    WHERE id = NEW.reward_id;
+
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger
+DROP TRIGGER IF EXISTS check_stock ON recompense;
+CREATE TRIGGER check_stock
+    BEFORE INSERT ON recompense
+    FOR EACH ROW
+    EXECUTE FUNCTION check_and_update_reward_stock();
+
+
+CREATE OR REPLACE FUNCTION check_and_validate_points(
+    user_uuid UUID,
+    points_needed INTEGER
+)
+RETURNS BOOLEAN
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Check if user has enough points
+    IF (SELECT points FROM profile WHERE user_id = user_uuid) < points_needed THEN
+        RAISE EXCEPTION 'Insufficient points. Available: %, Required: %',
+            (SELECT points FROM profile WHERE user_id = user_uuid),
+            points_needed;
+    END IF;
+    RETURN TRUE;
+END;
+$$;
+
+
+
+CREATE OR REPLACE FUNCTION check_points_before_donation()
+RETURNS TRIGGER
+SECURITY INVOKER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    PERFORM check_and_validate_points(NEW.sender_id, NEW.point);
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger
+DROP TRIGGER IF EXISTS check_points ON donation;
+CREATE TRIGGER check_points
+    BEFORE INSERT ON donation
+    FOR EACH ROW
+    EXECUTE FUNCTION check_points_before_donation();
+
+
+
+
+CREATE OR REPLACE FUNCTION check_points_before_product_order()
+RETURNS TRIGGER
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Check points only when order is completed
+    IF NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') THEN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM profile
+            WHERE user_id = NEW.user_id
+            AND points >= NEW.total_points
+        ) THEN
+            RAISE EXCEPTION 'Insufficient points';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger
+DROP TRIGGER IF EXISTS check_points ON commande;
+
+
+
+CREATE OR REPLACE FUNCTION check_product_stock()
+RETURNS TRIGGER
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    available_stock INTEGER;
+BEGIN
+    -- Get available stock
+    SELECT quantity INTO available_stock
+    FROM product
+    WHERE id = NEW.product_id;
+
+    -- Check if stock is sufficient
+    IF available_stock < NEW.quantity THEN
+        RAISE EXCEPTION 'Insufficient stock for product (ID: %)', NEW.product_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger
+DROP TRIGGER IF EXISTS check_stock ON commande;
+CREATE TRIGGER check_stock
+    BEFORE INSERT ON commande
+    FOR EACH ROW
+    EXECUTE FUNCTION check_product_stock();
+
+
+
+CREATE OR REPLACE FUNCTION get_available_points(p_user_id UUID)
+RETURNS INTEGER
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    total_earned INTEGER;
+    total_spent INTEGER;
+BEGIN
+    -- Calculate earned points
+    SELECT COALESCE(SUM(points), 0)
+    INTO total_earned
+    FROM daily_points
+    WHERE user_id = p_user_id;
+
+    -- Calculate points spent on rewards
+    SELECT COALESCE(SUM(r.point * rec.nombre), 0)
+    INTO total_spent
+    FROM recompense rec
+    JOIN reward r ON r.id = rec.reward_id
+    WHERE rec.profile_id = p_user_id
+    AND rec.archive = false;
+
+    -- Add points spent on donations
+    total_spent := total_spent + (
+        SELECT COALESCE(SUM(point), 0)
+        FROM donation
+        WHERE sender_id = p_user_id
+        AND archive = false
+    );
+
+    RETURN total_earned - total_spent;
+END;
+$$;
+
+
+// get_partner_rating pas encore faite ---------------------------
+
+get_partner_rating:
+arguments: p_partner_id(uuid)
+return : jsonb
+security: Definer
+definition:
+
+
+declare
+  result jsonb;
+begin
+  select jsonb_build_object(
+    'average', coalesce(avg(rating)::numeric(10,2), 0),
+    'count', count(*)
+  )
+  into result
+  from public.reviews
+  where partner_id = p_partner_id;
+
+  return result;
+end;
+---------------------------
+
+
+
+CREATE OR REPLACE FUNCTION get_user_points(p_user_id UUID)
+RETURNS INTEGER
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    total_earned INTEGER;
+    total_spent INTEGER;
+BEGIN
+    -- Get total earned points from daily_points
+    SELECT COALESCE(SUM(points), 0)
+    INTO total_earned
+    FROM daily_points
+    WHERE user_id = p_user_id;
+
+    -- Get points spent on rewards
+    SELECT COALESCE(SUM(r.point * rec.nombre), 0)
+    INTO total_spent
+    FROM recompense rec
+    JOIN reward r ON r.id = rec.reward_id
+    WHERE rec.profile_id = p_user_id
+    AND rec.archive = false;
+
+    RETURN total_earned - total_spent;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION get_weekly_stats(p_user_id UUID)
+RETURNS TABLE(date DATE, steps_count INTEGER, points INTEGER)
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    WITH dates AS (
+        SELECT generate_series(
+            date_trunc('day', now()) - interval '6 days',
+            date_trunc('day', now()),
+            interval '1 day'
+        )::DATE AS date
+    )
+    SELECT
+        d.date,
+        COALESCE(dp.steps_count, 0) AS steps_count,
+        COALESCE(dp.point_earned, 0) AS points
+    FROM dates d
+    LEFT JOIN daily_points dp ON dp.date = d.date AND dp.user_id = get_weekly_stats.p_user_id
+    ORDER BY d.date DESC;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO profile (user_id)
+    VALUES (NEW.id)
+    ON CONFLICT (user_id) DO NOTHING;
+    RETURN NEW;
+END;
+$$;
+
+
+
+
+CREATE OR REPLACE FUNCTION handle_point_share_acceptance()
+RETURNS TRIGGER
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE profile
+    SET points = points + NEW.point
+    WHERE user_id = NEW.receiver_id;
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger
+DROP TRIGGER IF EXISTS point_share_acceptance ON shared_reward;
+CREATE TRIGGER point_share_acceptance
+    AFTER INSERT ON shared_reward
+    FOR EACH ROW
+    EXECUTE FUNCTION handle_point_share_acceptance();
+
+
+
+
+CREATE OR REPLACE FUNCTION has_enough_points(
+    p_user_id UUID,
+    required_points INTEGER
+)
+RETURNS BOOLEAN
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN (
+        SELECT points >= required_points
+        FROM profile
+        WHERE user_id = p_user_id
+    );
+END;
+$$;
+
+
+
+CREATE OR REPLACE FUNCTION restore_reward_stock()
+RETURNS TRIGGER
+SECURITY INVOKER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.archive = true AND OLD.archive = false THEN
+        UPDATE reward r
+        SET stock = r.stock + rec.nombre
+        FROM recompense rec
+        WHERE rec.reward_id = r.id
+        AND rec.article_id = NEW.id;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger
+DROP TRIGGER IF EXISTS restore_stock ON recompense;
+CREATE TRIGGER restore_stock
+    AFTER UPDATE ON recompense
+    FOR EACH ROW
+    EXECUTE FUNCTION restore_reward_stock();
+
+
+
+CREATE OR REPLACE FUNCTION set_current_timestamp_updated_at()
+RETURNS TRIGGER
+SECURITY INVOKER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger for tables needing timestamp update
+CREATE OR REPLACE PROCEDURE create_update_timestamp_trigger(table_name TEXT)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    EXECUTE format('
+        DROP TRIGGER IF EXISTS set_timestamp ON %I;
+        CREATE TRIGGER set_timestamp
+            BEFORE UPDATE ON %I
+            FOR EACH ROW
+            EXECUTE FUNCTION set_current_timestamp_updated_at();
+    ', table_name, table_name);
+END;
+$$;
+
+
+
+CREATE OR REPLACE FUNCTION set_timestamp()
+RETURNS TRIGGER
+SECURITY INVOKER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.updated_at = TIMEZONE('utc'::text, NOW());
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger for tables with updated_at
+CREATE OR REPLACE PROCEDURE create_timestamp_trigger(table_name TEXT)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    EXECUTE format('
+        DROP TRIGGER IF EXISTS set_timestamp ON %I;
+        CREATE TRIGGER set_timestamp
+            BEFORE UPDATE ON %I
+            FOR EACH ROW
+            EXECUTE FUNCTION set_timestamp();
+    ', table_name, table_name);
+END;
+$$;
+
+
+
+CREATE OR REPLACE FUNCTION update_cumulative_points()
+RETURNS TRIGGER
+SECURITY INVOKER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE profile
+    SET points = points + NEW.points
+    WHERE user_id = NEW.user_id;
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger
+DROP TRIGGER IF EXISTS update_points ON daily_points;
+CREATE TRIGGER update_points
+    AFTER INSERT ON daily_points
+    FOR EACH ROW
+    EXECUTE FUNCTION update_cumulative_points();
+
+
+
+CREATE OR REPLACE FUNCTION update_product_stock()
+RETURNS TRIGGER
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Check if order is completed
+    IF NEW.type = 'completed' AND (OLD.type IS NULL OR OLD.type != 'completed') THEN
+        -- Update stock for each order item
+        UPDATE product p
+        SET quantity = p.quantity - c.quantity
+        FROM commande c
+        WHERE c.id = NEW.id
+        AND c.product_id = p.id;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger
+DROP TRIGGER IF EXISTS update_stock ON commande;
+CREATE TRIGGER update_stock
+    AFTER UPDATE ON commande
+    FOR EACH ROW
+    EXECUTE FUNCTION update_product_stock();
+
+
+
+
+CREATE OR REPLACE FUNCTION update_reward_stock(
+    p_reward_id UUID,
+    p_quantity INTEGER
+)
+RETURNS void
+SECURITY INVOKER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE reward
+    SET stock = stock - p_quantity
+    WHERE id = p_reward_id
+    AND stock >= p_quantity;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Insufficient stock';
+    END IF;
+END;
+$$;
+
+
+
+CREATE OR REPLACE FUNCTION update_user_points()
+RETURNS TRIGGER
+SECURITY INVOKER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Get points to deduct from NEW record
+    INSERT INTO daily_points (
+        user_id,
+        date,
+        points,
+        steps_count,
+        note
+    ) VALUES (
+        NEW.user_id,
+        CURRENT_DATE,
+        -NEW.points,
+        0,
+        'Points deducted for purchase'
+    )
+    ON CONFLICT (user_id, date) DO UPDATE
+    SET points = daily_points.points - NEW.points,
+        note = CASE
+            WHEN daily_points.note IS NULL THEN 'Points deducted for purchase'
+            ELSE daily_points.note || ' + Points deducted for purchase'
+        END;
+
+    RETURN NEW;
+END;
+$$;
+
+
+
+CREATE OR REPLACE FUNCTION invite_contacts(
+    contacts JSONB[],
+    inviter_uuid UUID
+)
+RETURNS JSONB
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    contact JSONB;
+    inserted_count INTEGER := 0;
+    skipped_count INTEGER := 0;
+BEGIN
+    FOREACH contact IN ARRAY contacts
+    LOOP
+        BEGIN
+            INSERT INTO contacts_requests (
+                from_user_id,
+                to_user_id,
+                status,
+                created_at
+            ) VALUES (
+                inviter_uuid,
+                (SELECT user_id FROM profile WHERE email = contact->>'email' LIMIT 1),
+                'pending',
+                CURRENT_TIMESTAMP
+            );
+            inserted_count := inserted_count + 1;
+        EXCEPTION
+            WHEN unique_violation THEN
+                skipped_count := skipped_count + 1;
+        END;
+    END LOOP;
+
+    RETURN jsonb_build_object(
+        'inserted', inserted_count,
+        'skipped', skipped_count
+    );
+END;
+$$;

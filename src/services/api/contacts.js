@@ -75,6 +75,7 @@ export const contactsApi = {
     }
   },
 
+
   // Inviter des contacts
   async inviteContacts(userId, contacts) {
     try {
@@ -135,4 +136,4 @@ export const contactsApi = {
       throw error
     }
   }
-} 
+}

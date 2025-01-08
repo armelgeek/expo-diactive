@@ -50,7 +50,7 @@ id
 product_id
 label
 description
-point 
+point
 selection_count
 image
 
@@ -168,7 +168,7 @@ sup: profiles
 id
 email
 phone
-username 
+username
 full_name
 avatar_url
 created_at
@@ -322,7 +322,7 @@ Database functions
 arguments: target_user_id(uuid), points(int), reason(text)
 return : void
 security: Definer
-definition: 
+definition:
 declare
     today date := current_date;
 begin
@@ -341,9 +341,9 @@ begin
         reason
     )
     on conflict (user_id, date) do update
-    set 
+    set
         points_earned = daily_steps.points_earned + points_amount,
-        note = case 
+        note = case
             when daily_steps.note is null then reason
             else daily_steps.note || ' + ' || reason
         end;
@@ -397,7 +397,7 @@ end;
 
 
 check_and_update_reward_stock:
-arguments: 
+arguments:
 return : trigger
 security: Definer
 definition:
@@ -432,16 +432,16 @@ definition:
 begin
     -- Vérifier si l'utilisateur a assez de points
     if not has_enough_points(user_id, points_needed) then
-        raise exception 'Points insuffisants. Disponible: %, Requis: %', 
-            get_available_points(user_id), 
+        raise exception 'Points insuffisants. Disponible: %, Requis: %',
+            get_available_points(user_id),
             points_needed;
     end if;
     return true;
 end;
 
 
-check_points_before_donation: 
-arguments: 
+check_points_before_donation:
+arguments:
 return : trigger
 security: Invoker
 definition:
@@ -454,7 +454,7 @@ end;
 
 
 check_points_before_product_order:
-arguments: 
+arguments:
 return : trigger
 security: Definer
 definition:
@@ -476,7 +476,7 @@ END;
 
 
 check_points_before_reward_order:
-arguments: 
+arguments:
 return : trigger
 security: Invoker
 definition:
@@ -500,7 +500,7 @@ begin
 end;
 
 check_product_stock:
-arguments: 
+arguments:
 return : trigger
 security: Definer
 definition:
@@ -525,7 +525,7 @@ END;
 
 
 check_reward_order_points:
-arguments: 
+arguments:
 return : trigger
 security: Invoker
 definition:
@@ -545,7 +545,7 @@ begin
 end;
 
 check_reward_stock:
-arguments: 
+arguments:
 return : trigger
 security: Definer
 definition:
@@ -616,7 +616,7 @@ begin
   into result
   from public.reviews
   where partner_id = p_partner_id;
-  
+
   return result;
 end;
 
@@ -642,9 +642,9 @@ begin
   join public.rewards r on r.id = roi.reward_id
   where r.partner_id = p_partner_id
   and exists (
-    select 1 
-    from public.reward_orders ro 
-    where ro.id = roi.order_id 
+    select 1
+    from public.reward_orders ro
+    where ro.id = roi.order_id
     and ro.status = 'completed'
   );
 
@@ -670,7 +670,7 @@ begin
   select json_agg(reward)
   into best_rewards
   from (
-    select 
+    select
       r.id,
       r.title,
       r.image_url,
@@ -710,7 +710,7 @@ begin
       '[]'::json
     )
     from (
-      select 
+      select
         r.id,
         r.title,
         r.description,
@@ -888,8 +888,8 @@ begin
     );
 end;
 
-restore_reward_stock: 
-arguments: 
+restore_reward_stock:
+arguments:
 return : trigger
 security: Invoker
 definition:
@@ -908,7 +908,7 @@ end;
 
 
 set_current_timestamp_updated_at:
-arguments: 
+arguments:
 return : trigger
 security: Invoker
 definition:
@@ -920,7 +920,7 @@ begin
 end;
 
 set_timestamp:
-arguments: 
+arguments:
 return : trigger
 security: Invoker
 definition:
@@ -991,7 +991,7 @@ begin
     set stock = stock - p_quantity
     where id = p_reward_id
     and stock >= p_quantity;
-    
+
     if not found then
         raise exception 'Stock insuffisant';
     end if;
@@ -1012,17 +1012,7 @@ begin
     return NEW;
 end;
 
-update_updated_at_column:
-arguments:
-return : trigger
-security: Invoker
-definition:
 
-
-begin
-    new.updated_at = now();
-    return new;
-end;
 
 update_user_points:
 arguments: p_user_id(uuid), p_points_to_deduct(integer)
@@ -1058,14 +1048,14 @@ begin
   )
   on conflict (user_id, date) do update
   set points_earned = daily_steps.points_earned - p_points_to_deduct,
-      note = case 
+      note = case
         when daily_steps.note is null then 'Points déduits pour achat'
         else daily_steps.note || ' + Points déduits pour achat'
       end;
 end;
 
 
-Indexation: 
+Indexation:
 CREATE UNIQUE INDEX categories_name_key ON public.categories USING btree (name)
 CREATE UNIQUE INDEX categories_pkey ON public.categories USING btree (id)
 CREATE UNIQUE INDEX daily_steps_pkey ON public.daily_steps USING btree (id)
