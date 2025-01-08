@@ -1,6 +1,5 @@
 import { supabase } from '../supabase'
 
-// Service pour gérer les opérations liées aux récompenses et aux commandes
 export const rewardOrderService = {
   async updateRewardStock(rewardId, quantity) {
     try {
@@ -19,9 +18,10 @@ export const rewardOrderService = {
   async fetchRewardStock(rewardId) {
     try {
       const { data, error } = await supabase
-        .from('rewards')
+        .from('reward')
         .select('stock')
         .eq('id', rewardId)
+        .eq('archive', false)
         .single()
 
       if (error) throw error
@@ -50,72 +50,81 @@ export const rewardOrderService = {
 
   async createOrder(userId, items, totalPoints) {
     try {
-      // Vérifier les points disponibles
       const hasEnoughPoints = await this.checkUserPoints(userId, totalPoints)
       if (!hasEnoughPoints) {
-        throw new Error('Points insuffisants')
+        throw new Error('Insufficient points')
       }
 
-      // Créer la commande
       const { data: order, error: orderError } = await supabase
-        .from('reward_orders')
+        .from('commande')
         .insert({
           user_id: userId,
-          status: 'pending',
-          total_points: totalPoints
+          type: 'pending',
+          total_points: totalPoints,
+          archive: false
         })
         .select()
         .single()
 
       if (orderError) throw orderError
 
-      // Ajouter les items
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        reward_id: item.id,
-        quantity: item.quantity,
-        points_cost: item.points_cost
-      }))
-
-      // Insérer les items un par un
-      for (const item of orderItems) {
+      for (const item of items) {
         const { error: itemError } = await supabase
-          .from('reward_order_items')
-          .insert(item)
+          .from('recompense')
+          .insert({
+            article_id: order.id,
+            reward_id: item.id,
+            nombre: item.quantity,
+            point: item.points_cost,
+            archive: false
+          })
 
         if (itemError) {
-          // Annuler la commande en cas d'erreur
           await this.cancelOrder(order.id)
           throw itemError
         }
       }
 
-      // Finaliser la commande
       const { data: completedOrder, error: updateError } = await supabase
-        .from('reward_orders')
-        .update({ status: 'completed' })
+        .from('commande')
+        .update({ type: 'completed' })
         .eq('id', order.id)
         .select(`
           id,
           created_at,
-          status,
+          type,
           total_points,
-          reward_order_items!inner (
+          recompense!inner (
             id,
-            quantity,
-            points_cost,
-            reward:rewards (
+            nombre,
+            point,
+            reward:reward (
               id,
-              title,
+              label,
               description,
-              image_url
+              image
             )
           )
         `)
         .single()
 
       if (updateError) throw updateError
-      return completedOrder
+
+      return {
+        ...completedOrder,
+        status: completedOrder.type,
+        reward_order_items: completedOrder.recompense.map(item => ({
+          id: item.id,
+          quantity: item.nombre,
+          points_cost: item.point,
+          reward: {
+            id: item.reward.id,
+            title: item.reward.label,
+            description: item.reward.description,
+            image_url: item.reward.image
+          }
+        }))
+      }
     } catch (error) {
       console.error('Error creating order:', error)
       throw error
@@ -125,8 +134,8 @@ export const rewardOrderService = {
   async cancelOrder(orderId) {
     try {
       const { error } = await supabase
-        .from('reward_orders')
-        .update({ status: 'cancelled' })
+        .from('commande')
+        .update({ type: 'cancelled', archive: true })
         .eq('id', orderId)
 
       if (error) throw error
@@ -135,4 +144,4 @@ export const rewardOrderService = {
       throw error
     }
   }
-} 
+}

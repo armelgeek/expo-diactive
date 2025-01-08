@@ -1,28 +1,39 @@
 import { supabase } from '../supabase'
 
-// Service pour gérer les opérations liées aux offres
 export const deals = {
   async fetchDeals() {
     try {
       const { data, error } = await supabase
-        .from('products')
+        .from('product')
         .select(`
           *,
-          partner:partners (
+          partner:partner (
             id,
-            company_name,
-            logo_url
+            nom,
+            logo
           )
         `)
-        .gt('stock', 0)
-        .order('points_cost', { ascending: true })
+        .gt('quantity', 0)
+        .order('price', { ascending: true })
 
       if (error) throw error
 
-      return data || []
+      return data?.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        points_cost: item.price,
+        image_url: item.image_url,
+        stock: item.quantity,
+        partner: {
+          id: item.partner.id,
+          company_name: item.partner.nom,
+          logo_url: item.partner.logo
+        }
+      })) || []
     } catch (error) {
       console.error('Error fetching deals:', error)
       throw error
     }
   }
-} 
+}

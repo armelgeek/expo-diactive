@@ -1,6 +1,5 @@
 import { supabase } from '../supabase'
 
-// Service pour gérer les opérations liées aux récompenses
 export const rewardService = {
   async updateRewardStock(rewardId, quantity) {
     try {
@@ -19,9 +18,10 @@ export const rewardService = {
   async fetchRewardStock(rewardId) {
     try {
       const { data, error } = await supabase
-        .from('rewards')
+        .from('reward')
         .select('stock')
         .eq('id', rewardId)
+        .eq('archive', false)
         .single()
 
       if (error) throw error
@@ -31,4 +31,4 @@ export const rewardService = {
       throw error
     }
   }
-} 
+}

@@ -3,7 +3,7 @@ import { supabase } from '../supabase'
 // Mappers
 const mapContactFromDB = (dbContact) => ({
   id: dbContact.id,
-  fullName: dbContact.full_name,
+  fullName: dbContact.user_name,
   email: dbContact.email,
   phone: dbContact.phone,
   createdAt: dbContact.created_at
@@ -17,16 +17,21 @@ const mapInvitationFromDB = (dbInvitation) => ({
   createdAt: dbInvitation.created_at
 })
 
-// API calls
 export const contactsApi = {
-  // Récupérer tous les contacts
   async fetchContacts(userId) {
     try {
       const { data, error } = await supabase
         .from('contacts')
-        .select('*')
+        .select(`
+          contacts.id,
+          profile.user_name,
+          profile.email,
+          profile.phone,
+          contacts.created_at
+        `)
         .eq('user_id', userId)
-        .order('full_name', { ascending: true })
+        .join('profile', { 'contacts.contact_id': 'profile.user_id' })
+        .order('user_name', { ascending: true })
 
       if (error) throw error
       return (data || []).map(mapContactFromDB)
@@ -36,13 +41,19 @@ export const contactsApi = {
     }
   },
 
-  // Récupérer l'historique des invitations
   async fetchInvitations(userId) {
     try {
       const { data, error } = await supabase
-        .from('invite_contacts')
-        .select('*')
-        .eq('user_id', userId)
+        .from('contacts_requests')
+        .select(`
+          id,
+          profile.email,
+          profile.phone,
+          status,
+          created_at
+        `)
+        .eq('from_user_id', userId)
+        .join('profile', { 'contacts_requests.to_user_id': 'profile.user_id' })
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -53,18 +64,31 @@ export const contactsApi = {
     }
   },
 
-  // Ajouter un contact
   async addContact(userId, contact) {
     try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profile')
+        .select('user_id')
+        .eq('email', contact.email)
+        .single()
+
+      if (profileError) throw profileError
+
       const { data, error } = await supabase
         .from('contacts')
         .insert({
           user_id: userId,
-          full_name: contact.fullName,
-          email: contact.email,
-          phone: contact.phone
+          contact_id: profileData.user_id,
+          created_at: new Date()
         })
-        .select()
+        .select(`
+          contacts.id,
+          profile.user_name,
+          profile.email,
+          profile.phone,
+          contacts.created_at
+        `)
+        .join('profile', { 'contacts.contact_id': 'profile.user_id' })
         .single()
 
       if (error) throw error
@@ -75,21 +99,34 @@ export const contactsApi = {
     }
   },
 
-
-  // Inviter des contacts
   async inviteContacts(userId, contacts) {
     try {
-      const invitations = contacts.map(contact => ({
-        user_id: userId,
-        email: contact.email,
-        phone: contact.phone,
-        status: 'pending'
+      const requests = await Promise.all(contacts.map(async contact => {
+        const { data: profileData } = await supabase
+          .from('profile')
+          .select('user_id')
+          .eq('email', contact.email)
+          .single()
+
+        return {
+          from_user_id: userId,
+          to_user_id: profileData?.user_id,
+          status: 'pending',
+          created_at: new Date()
+        }
       }))
 
       const { data, error } = await supabase
-        .from('invite_contacts')
-        .insert(invitations)
-        .select()
+        .from('contacts_requests')
+        .insert(requests.filter(req => req.to_user_id))
+        .select(`
+          id,
+          profile.email,
+          profile.phone,
+          status,
+          created_at
+        `)
+        .join('profile', { 'contacts_requests.to_user_id': 'profile.user_id' })
 
       if (error) throw error
       return (data || []).map(mapInvitationFromDB)
@@ -99,7 +136,6 @@ export const contactsApi = {
     }
   },
 
-  // Supprimer un contact
   async deleteContact(contactId) {
     try {
       const { error } = await supabase
@@ -115,17 +151,16 @@ export const contactsApi = {
     }
   },
 
-  // Mettre à jour un contact
-  async updateContact(contactId, updates) {
+  async updateContact(userId, updates) {
     try {
       const { data, error } = await supabase
-        .from('contacts')
+        .from('profile')
         .update({
-          full_name: updates.fullName,
+          user_name: updates.fullName,
           email: updates.email,
           phone: updates.phone
         })
-        .eq('id', contactId)
+        .eq('user_id', userId)
         .select()
         .single()
 

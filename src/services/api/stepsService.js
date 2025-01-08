@@ -1,18 +1,18 @@
 import { supabase } from '../supabase'
 
-// Service pour gérer les opérations liées aux pas
 export const stepsService = {
   async fetchUserPoints(userId) {
     try {
-      const { data: availablePoints, error: pointsError } = await supabase
-        .rpc('get_available_points', { 
-          p_user_id: userId 
-        })
+      const { data, error } = await supabase
+        .from('profile')
+        .select('points')
+        .eq('user_id', userId)
+        .single()
 
-      if (pointsError) throw pointsError
-      return availablePoints || 0
+      if (error) throw error
+      return data?.points || 0
     } catch (err) {
-      console.error('Erreur lors de la récupération des points:', err)
+      console.error('Error fetching points:', err)
       throw err
     }
   },
@@ -21,8 +21,8 @@ export const stepsService = {
     try {
       const today = new Date().toISOString().split('T')[0]
       const { data, error } = await supabase
-        .from('daily_steps')
-        .select('steps_count, points_earned')
+        .from('daily_points')
+        .select('steps_count, points')
         .eq('user_id', userId)
         .eq('date', today)
         .single()
@@ -30,7 +30,7 @@ export const stepsService = {
       if (error && error.code !== 'PGRST116') throw error // PGRST116 = not found
       return data?.steps_count || 0
     } catch (err) {
-      console.error('Erreur lors de la récupération des pas:', err)
+      console.error('Error fetching steps:', err)
       throw err
     }
   },
@@ -38,12 +38,17 @@ export const stepsService = {
   async fetchWeeklyStats(userId) {
     try {
       const { data, error } = await supabase
-        .rpc('get_weekly_stats', { user_id: userId })
+        .rpc('get_weekly_stats', {
+          p_user_id: userId
+        })
 
       if (error) throw error
-      return data || []
+      return data?.map(stat => ({
+        ...stat,
+        points_earned: stat.points
+      })) || []
     } catch (err) {
-      console.error('Erreur lors de la récupération des statistiques:', err)
+      console.error('Error fetching statistics:', err)
       throw err
     }
   },
@@ -51,21 +56,21 @@ export const stepsService = {
   async updateSteps(userId, newSteps) {
     try {
       const today = new Date().toISOString().split('T')[0]
-      const pointsEarned = Math.floor(newSteps / 100) // 1 point pour 100 pas
+      const points = Math.floor(newSteps / 100) // 1 point per 100 steps
 
       const { error } = await supabase
-        .from('daily_steps')
+        .from('daily_points')
         .upsert({
           user_id: userId,
           date: today,
           steps_count: newSteps,
-          points_earned: pointsEarned,
+          points: points
         })
 
       if (error) throw error
     } catch (err) {
-      console.error('Erreur lors de la mise à jour des pas:', err)
+      console.error('Error updating steps:', err)
       throw err
     }
   }
-} 
+}

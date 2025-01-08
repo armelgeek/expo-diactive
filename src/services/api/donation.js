@@ -1,33 +1,35 @@
 import { supabase } from '../supabase'
 
-// Service pour gérer les opérations liées aux dons
 export const donationService = {
   async makeDonation(instituteId, userId, points) {
     try {
-      // Vérifier l'objectif de l'institut
-      const { data: institute, error: instituteError } = await supabase
-        .from('institutes')
-        .select('points_goal, current_points')
+      const { data: institute, error: sosError } = await supabase
+        .from('sos_diactive_plus')
+        .select('point_objective, points')
         .eq('id', instituteId)
         .single()
 
-      if (instituteError) throw instituteError
+      if (sosError) throw sosError
 
-      // Créer le don
       const { error: donationError } = await supabase
-        .from('donations')
+        .from('donation')
         .insert({
-          institute_id: instituteId,
-          user_id: userId,
-          points_amount: points,
+          sos_diactive_plus_id: instituteId,
+          sender_id: userId,
+          point: points,
         })
 
       if (donationError) throw donationError
 
-      return { success: true, goalReached: (institute.current_points + points >= institute.points_goal) }
+      return {
+        success: true,
+        goalReached: (
+          institute.points + points >= institute.point_objective
+        )
+      }
     } catch (error) {
       console.error('Error making donation:', error)
       throw error
     }
   }
-} 
+}

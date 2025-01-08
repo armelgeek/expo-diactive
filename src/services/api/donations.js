@@ -1,30 +1,28 @@
 import { supabase } from '../supabase'
 
-// Mappers
 const mapInstituteFromDB = (dbInstitute) => ({
   id: dbInstitute.id,
   name: dbInstitute.name,
   description: dbInstitute.description,
-  imageUrl: dbInstitute.image_url,
-  pointsGoal: dbInstitute.points_goal,
-  currentPoints: dbInstitute.current_points
+  imageUrl: dbInstitute.logo,
+  pointsGoal: dbInstitute.point_objective,
+  currentPoints: dbInstitute.points
 })
 
 const mapDonationFromDB = (dbDonation) => ({
   id: dbDonation.id,
   createdAt: dbDonation.created_at,
-  pointsAmount: dbDonation.points_amount,
-  institute: dbDonation.institute ? mapInstituteFromDB(dbDonation.institute) : null
+  pointsAmount: dbDonation.point,
+  institute: dbDonation.sos_diactive_plus ? mapInstituteFromDB(dbDonation.sos_diactive_plus) : null
 })
 
-// API calls
 export const donationsApi = {
-  // Récupérer tous les instituts
   async fetchInstitutes() {
     try {
       const { data, error } = await supabase
-        .from('institutes')
+        .from('sos_diactive_plus')
         .select('*')
+        .eq('archive', false)
         .order('name', { ascending: true })
 
       if (error) throw error
@@ -35,16 +33,16 @@ export const donationsApi = {
     }
   },
 
-  // Récupérer l'historique des dons d'un utilisateur
   async fetchUserDonations(userId) {
     try {
       const { data, error } = await supabase
-        .from('donations')
+        .from('donation')
         .select(`
           *,
-          institute:institutes (*)
+          sos_diactive_plus (*)
         `)
-        .eq('user_id', userId)
+        .eq('sender_id', userId)
+        .eq('archive', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -55,10 +53,8 @@ export const donationsApi = {
     }
   },
 
-  // Faire un don
   async makeDonation(userId, instituteId, pointsAmount) {
     try {
-      // Vérifier les points disponibles
       const { data: hasPoints, error: pointsError } = await supabase
         .rpc('has_enough_points', {
           p_user_id: userId,
@@ -66,19 +62,18 @@ export const donationsApi = {
         })
 
       if (pointsError) throw pointsError
-      if (!hasPoints) throw new Error('Points insuffisants')
+      if (!hasPoints) throw new Error('Insufficient points')
 
-      // Créer le don
       const { data: donation, error: donationError } = await supabase
-        .from('donations')
+        .from('donation')
         .insert({
-          user_id: userId,
-          institute_id: instituteId,
-          points_amount: pointsAmount
+          sender_id: userId,
+          sos_diactive_plus_id: instituteId,
+          point: pointsAmount
         })
         .select(`
           *,
-          institute:institutes (*)
+          sos_diactive_plus (*)
         `)
         .single()
 
@@ -89,4 +84,4 @@ export const donationsApi = {
       throw error
     }
   }
-} 
+}

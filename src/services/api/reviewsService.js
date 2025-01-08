@@ -1,28 +1,42 @@
 import { supabase } from '../supabase'
 
-// Service pour gérer les opérations liées aux avis
 export const reviewsService = {
   async fetchReviews(partnerId) {
     try {
       const { data, error } = await supabase
-        .from('reviews')
+        .from('partner')
         .select(`
-          *,
-          user:user_id (
-            email,
-            profiles (username, full_name)
-          ),
-          response:review_responses (
-            id,
-            response,
-            created_at
+          note,
+          type,
+          created_at,
+          profile:profile_partner!inner (
+            user:profile!inner (
+              email,
+              user_name,
+              first_name,
+              last_name
+            )
           )
         `)
-        .eq('partner_id', partnerId)
+        .eq('id', partnerId)
+        .eq('archive', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data
+
+      return data?.map(review => ({
+        id: review.id,
+        rating: review.note,
+        comment: review.type,
+        created_at: review.created_at,
+        user: {
+          email: review.profile.user.email,
+          profiles: [{
+            username: review.profile.user.user_name,
+            full_name: `${review.profile.user.first_name} ${review.profile.user.last_name}`.trim()
+          }]
+        }
+      })) || []
     } catch (error) {
       console.error('Error fetching reviews:', error)
       throw error
@@ -31,14 +45,16 @@ export const reviewsService = {
 
   async addReview(partnerId, rating, comment) {
     try {
+      const userId = supabase.auth.user().id
+
       const { error } = await supabase
-        .from('reviews')
-        .insert({
-          user_id: supabase.auth.user().id,
-          partner_id: partnerId,
-          rating,
-          comment,
+        .from('partner')
+        .update({
+          note: rating,
+          type: comment
         })
+        .eq('id', partnerId)
+        .eq('user_id', userId)
 
       if (error) throw error
     } catch (error) {
@@ -50,12 +66,11 @@ export const reviewsService = {
   async respondToReview(reviewId, partnerId, response) {
     try {
       const { error } = await supabase
-        .from('review_responses')
-        .insert({
-          review_id: reviewId,
-          partner_id: partnerId,
-          response,
+        .from('partner')
+        .update({
+          description: response
         })
+        .eq('id', partnerId)
 
       if (error) throw error
     } catch (error) {
@@ -63,4 +78,4 @@ export const reviewsService = {
       throw error
     }
   }
-} 
+}

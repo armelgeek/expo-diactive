@@ -1,21 +1,20 @@
 import { supabase } from '../supabase'
 
-// Service pour gérer les opérations liées aux partenaires
 export const partnersService = {
   async checkPartnerStatus(userId) {
     try {
       const { data, error } = await supabase
-        .from('partners')
+        .from('partner')
         .select(`
           *,
-          category:partner_categories (
+          type:partner_type (
             id,
-            name,
-            description,
-            icon_name
+            label,
+            description
           )
         `)
         .eq('user_id', userId)
+        .eq('archive', false)
         .maybeSingle()
 
       if (error) throw error
@@ -24,12 +23,17 @@ export const partnersService = {
         isPartner: !!data,
         profile: data ? {
           id: data.id,
-          companyName: data.company_name,
+          companyName: data.nom,
           description: data.description,
-          logoUrl: data.logo_url,
+          logoUrl: data.logo,
           websiteUrl: data.website_url,
-          status: data.status,
-          category: data.category,
+          status: !data.archive,
+          category: data.type ? {
+            id: data.type.id,
+            name: data.type.label,
+            description: data.type.description,
+            icon_name: 'default-icon'
+          } : null,
           createdAt: data.created_at
         } : null
       }
@@ -42,22 +46,28 @@ export const partnersService = {
   async createPartnerProfile(profile, userId) {
     try {
       const { data, error } = await supabase
-        .from('partners')
+        .from('partner')
         .insert({
           user_id: userId,
-          company_name: profile.companyName.trim(),
+          nom: profile.companyName.trim(),
           description: profile.description?.trim() || null,
-          logo_url: profile.logoUrl || null,
+          logo: profile.logoUrl || null,
           website_url: profile.websiteUrl?.trim() || null,
-          category_id: profile.categoryId,
-          status: 'pending'
+          type_id: profile.categoryId,
+          archive: false
         })
         .select()
         .single()
 
       if (error) throw error
 
-      return data
+      return {
+        ...data,
+        company_name: data.nom,
+        logo_url: data.logo,
+        category_id: data.type_id,
+        status: !data.archive
+      }
     } catch (error) {
       console.error('Error creating partner profile:', error)
       throw error
@@ -67,24 +77,31 @@ export const partnersService = {
   async updatePartnerProfile(updates, partnerId) {
     try {
       const { data, error } = await supabase
-        .from('partners')
+        .from('partner')
         .update({
-          company_name: updates.companyName.trim(),
+          nom: updates.companyName.trim(),
           description: updates.description?.trim() || null,
-          logo_url: updates.logoUrl || null,
+          logo: updates.logoUrl || null,
           website_url: updates.websiteUrl?.trim() || null,
-          category_id: updates.categoryId
+          type_id: updates.categoryId
         })
         .eq('id', partnerId)
+        .eq('archive', false)
         .select()
         .single()
 
       if (error) throw error
 
-      return data
+      return {
+        ...data,
+        company_name: data.nom,
+        logo_url: data.logo,
+        category_id: data.type_id,
+        status: !data.archive
+      }
     } catch (error) {
       console.error('Error updating partner profile:', error)
       throw error
     }
   }
-} 
+}

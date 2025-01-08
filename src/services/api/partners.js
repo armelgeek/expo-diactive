@@ -1,33 +1,32 @@
 import { supabase } from '../supabase'
 
-// Mappers
 const mapPartnerFromDB = (dbPartner) => ({
   id: dbPartner.id,
   userId: dbPartner.user_id,
-  companyName: dbPartner.company_name,
+  companyName: dbPartner.nom,
   description: dbPartner.description,
-  logoUrl: dbPartner.logo_url,
+  logoUrl: dbPartner.logo,
   websiteUrl: dbPartner.website_url,
-  status: dbPartner.status,
+  status: !dbPartner.archive,
   createdAt: dbPartner.created_at
 })
 
 const mapPartnerToDB = (partner) => ({
   user_id: partner.userId,
-  company_name: partner.companyName,
+  nom: partner.companyName,
   description: partner.description,
-  logo_url: partner.logoUrl,
+  logo: partner.logoUrl,
   website_url: partner.websiteUrl
 })
 
-// API calls
 export const partnersApi = {
   async fetchPartnerProfile(userId) {
     try {
       const { data, error } = await supabase
-        .from('partners')
+        .from('partner')
         .select('*')
         .eq('user_id', userId)
+        .eq('archive', false)
         .single()
 
       if (error) throw error
@@ -41,10 +40,11 @@ export const partnersApi = {
   async createPartnerProfile(userId, profile) {
     try {
       const { data, error } = await supabase
-        .from('partners')
+        .from('partner')
         .insert({
           user_id: userId,
-          ...mapPartnerToDB(profile)
+          ...mapPartnerToDB(profile),
+          archive: false
         })
         .select()
         .single()
@@ -60,9 +60,10 @@ export const partnersApi = {
   async updatePartnerProfile(partnerId, updates) {
     try {
       const { data, error } = await supabase
-        .from('partners')
+        .from('partner')
         .update(mapPartnerToDB(updates))
         .eq('id', partnerId)
+        .eq('archive', false)
         .select()
         .single()
 
@@ -76,16 +77,17 @@ export const partnersApi = {
 
   async fetchPartnerStats(partnerId) {
     try {
-      const { data, error } = await supabase
-        .rpc('get_partner_stats', {
-          p_partner_id: partnerId
-        })
+      const { data: orders } = await supabase
+        .from('commande')
+        .select('total_points, quantity')
+        .eq('partner_id', partnerId)
+        .eq('type', 'completed')
+        .eq('archive', false)
 
-      if (error) throw error
       return {
-        totalOrders: data.total_orders,
-        totalPointsSpent: data.total_points_spent,
-        totalItemsSold: data.total_items_sold
+        totalOrders: orders?.length || 0,
+        totalPointsSpent: orders?.reduce((sum, order) => sum + order.total_points, 0) || 0,
+        totalItemsSold: orders?.reduce((sum, order) => sum + order.quantity, 0) || 0
       }
     } catch (error) {
       console.error('Error fetching partner stats:', error)
@@ -95,19 +97,34 @@ export const partnersApi = {
 
   async fetchRewardRanking(partnerId) {
     try {
-      const { data, error } = await supabase
-        .rpc('get_partner_reward_ranking', {
-          p_partner_id: partnerId
-        })
+      const { data: recompenses } = await supabase
+        .from('recompense')
+        .select(`
+          reward_id,
+          reward (label),
+          nombre
+        `)
+        .eq('partner_id', partnerId)
+        .eq('archive', false)
 
-      if (error) throw error
-      return (data || []).map(item => ({
-        rewardId: item.reward_id,
-        rewardTitle: item.reward_title,
-        totalOrders: item.total_orders,
-        totalItemsSold: item.total_items_sold,
-        totalPointsSpent: item.total_points_spent
-      }))
+      const ranking = recompenses?.reduce((acc, rec) => {
+        const existing = acc.find(r => r.reward_id === rec.reward_id)
+        if (existing) {
+          existing.totalOrders++
+          existing.totalItemsSold += rec.nombre
+        } else {
+          acc.push({
+            rewardId: rec.reward_id,
+            rewardTitle: rec.reward.label,
+            totalOrders: 1,
+            totalItemsSold: rec.nombre,
+            totalPointsSpent: rec.nombre * rec.reward.point
+          })
+        }
+        return acc
+      }, []) || []
+
+      return ranking
     } catch (error) {
       console.error('Error fetching reward ranking:', error)
       throw error
@@ -117,34 +134,56 @@ export const partnersApi = {
   async fetchPartnerOrders(partnerId) {
     try {
       const { data, error } = await supabase
-        .from('reward_orders')
+        .from('commande')
         .select(`
           id,
           created_at,
-          status,
+          type,
           total_points,
-          user:users (
-            id,
+          user:profile!commande_user_id_fkey (
+            user_id,
             email,
-            full_name
+            user_name
           ),
-          reward_order_items!inner (
+          recompense!inner (
             id,
-            quantity,
-            points_cost,
-            reward:rewards!inner (
+            nombre,
+            point,
+            reward:reward!inner (
               id,
-              title,
+              label,
               partner_id
             )
           )
         `)
-        .eq('status', 'completed')
-        .eq('reward_order_items.reward.partner_id', partnerId)
+        .eq('type', 'completed')
+        .eq('partner_id', partnerId)
+        .eq('archive', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data || []
+
+      return data?.map(order => ({
+        id: order.id,
+        created_at: order.created_at,
+        status: order.type,
+        total_points: order.total_points,
+        user: {
+          id: order.user.user_id,
+          email: order.user.email,
+          full_name: order.user.user_name
+        },
+        reward_order_items: order.recompense.map(rec => ({
+          id: rec.id,
+          quantity: rec.nombre,
+          points_cost: rec.point,
+          reward: {
+            id: rec.reward.id,
+            title: rec.reward.label,
+            partner_id: rec.reward.partner_id
+          }
+        }))
+      })) || []
     } catch (error) {
       console.error('Error fetching partner orders:', error)
       throw error
@@ -154,19 +193,20 @@ export const partnersApi = {
   async fetchPartnerRewards(partnerId) {
     try {
       const { data, error } = await supabase
-        .from('rewards')
+        .from('reward')
         .select('*')
         .eq('partner_id', partnerId)
+        .eq('archive', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
       return (data || []).map(reward => ({
         id: reward.id,
         partnerId: reward.partner_id,
-        title: reward.title,
+        title: reward.label,
         description: reward.description,
-        imageUrl: reward.image_url,
-        pointsCost: reward.points_cost,
+        imageUrl: reward.image,
+        pointsCost: reward.point,
         stock: reward.stock,
         createdAt: reward.created_at
       }))
@@ -179,14 +219,15 @@ export const partnersApi = {
   async createReward(reward) {
     try {
       const { data, error } = await supabase
-        .from('rewards')
+        .from('reward')
         .insert({
           partner_id: reward.partnerId,
-          title: reward.title,
+          label: reward.title,
           description: reward.description,
-          image_url: reward.imageUrl,
-          points_cost: reward.pointsCost,
-          stock: reward.stock
+          image: reward.imageUrl,
+          point: reward.pointsCost,
+          stock: reward.stock,
+          archive: false
         })
         .select()
         .single()
@@ -195,10 +236,10 @@ export const partnersApi = {
       return {
         id: data.id,
         partnerId: data.partner_id,
-        title: data.title,
+        title: data.label,
         description: data.description,
-        imageUrl: data.image_url,
-        pointsCost: data.points_cost,
+        imageUrl: data.image,
+        pointsCost: data.point,
         stock: data.stock,
         createdAt: data.created_at
       }
@@ -211,15 +252,16 @@ export const partnersApi = {
   async updateReward(rewardId, updates) {
     try {
       const { data, error } = await supabase
-        .from('rewards')
+        .from('reward')
         .update({
-          title: updates.title,
+          label: updates.title,
           description: updates.description,
-          image_url: updates.imageUrl,
-          points_cost: updates.pointsCost,
+          image: updates.imageUrl,
+          point: updates.pointsCost,
           stock: updates.stock
         })
         .eq('id', rewardId)
+        .eq('archive', false)
         .select()
         .single()
 
@@ -227,10 +269,10 @@ export const partnersApi = {
       return {
         id: data.id,
         partnerId: data.partner_id,
-        title: data.title,
+        title: data.label,
         description: data.description,
-        imageUrl: data.image_url,
-        pointsCost: data.points_cost,
+        imageUrl: data.image,
+        pointsCost: data.point,
         stock: data.stock,
         createdAt: data.created_at
       }
@@ -243,8 +285,8 @@ export const partnersApi = {
   async deleteReward(rewardId) {
     try {
       const { error } = await supabase
-        .from('rewards')
-        .delete()
+        .from('reward')
+        .update({ archive: true })
         .eq('id', rewardId)
 
       if (error) throw error
@@ -253,4 +295,4 @@ export const partnersApi = {
       throw error
     }
   }
-} 
+}

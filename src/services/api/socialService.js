@@ -1,22 +1,42 @@
 import { supabase } from '../supabase'
 import * as Contacts from 'expo-contacts'
 
-// Service pour gérer les opérations liées aux interactions sociales
 export const socialService = {
   async fetchFriends(userId) {
     try {
       const { data, error } = await supabase
-        .from('friendships')
+        .from('contacts')
         .select(`
           id,
-          status,
-          friend:friend_id (id, email, profiles(username, full_name, phone))
+          friend:contact_id (
+            profile:profile!inner (
+              user_id,
+              email,
+              user_name,
+              first_name,
+              last_name,
+              phone
+            )
+          )
         `)
         .eq('user_id', userId)
-        .eq('status', 'accepted')
+        .eq('archive', false)
 
       if (error) throw error
-      return data
+
+      return data.map(friendship => ({
+        id: friendship.id,
+        status: 'accepted',
+        friend: {
+          id: friendship.friend.profile.user_id,
+          email: friendship.friend.profile.email,
+          profiles: [{
+            username: friendship.friend.profile.user_name,
+            full_name: `${friendship.friend.profile.first_name} ${friendship.friend.profile.last_name}`.trim(),
+            phone: friendship.friend.profile.phone
+          }]
+        }
+      }))
     } catch (err) {
       console.error('Error fetching friends:', err)
       throw err
@@ -26,16 +46,37 @@ export const socialService = {
   async fetchPendingRequests(userId) {
     try {
       const { data, error } = await supabase
-        .from('friendships')
+        .from('contacts_requests')
         .select(`
           id,
-          user:user_id (id, email, profiles(username, full_name, phone))
+          user:from_user_id (
+            profile:profile!inner (
+              user_id,
+              email,
+              user_name,
+              first_name,
+              last_name,
+              phone
+            )
+          )
         `)
-        .eq('friend_id', userId)
+        .eq('to_user_id', userId)
         .eq('status', 'pending')
 
       if (error) throw error
-      return data
+
+      return data.map(request => ({
+        id: request.id,
+        user: {
+          id: request.user.profile.user_id,
+          email: request.user.profile.email,
+          profiles: [{
+            username: request.user.profile.user_name,
+            full_name: `${request.user.profile.first_name} ${request.user.profile.last_name}`.trim(),
+            phone: request.user.profile.phone
+          }]
+        }
+      }))
     } catch (err) {
       console.error('Error fetching pending requests:', err)
       throw err
@@ -61,10 +102,11 @@ export const socialService = {
   async sendFriendRequest(userId, friendId) {
     try {
       const { error } = await supabase
-        .from('friendships')
+        .from('contacts_requests')
         .insert({
-          user_id: userId,
-          friend_id: friendId,
+          from_user_id: userId,
+          to_user_id: friendId,
+          status: 'pending'
         })
 
       if (error) throw error
@@ -76,11 +118,26 @@ export const socialService = {
 
   async respondToFriendRequest(requestId, accept) {
     try {
+      const { data: request, error: requestError } = await supabase
+        .from('contacts_requests')
+        .select('from_user_id, to_user_id')
+        .eq('id', requestId)
+        .single()
+
+      if (requestError) throw requestError
+
+      if (accept) {
+        await supabase.from('contacts').insert([
+          { user_id: request.from_user_id, contact_id: request.to_user_id },
+          { user_id: request.to_user_id, contact_id: request.from_user_id }
+        ])
+      }
+
       const { error } = await supabase
-        .from('friendships')
+        .from('contacts_requests')
         .update({
           status: accept ? 'accepted' : 'rejected',
-          updated_at: new Date(),
+          updated_at: new Date()
         })
         .eq('id', requestId)
 
@@ -93,33 +150,30 @@ export const socialService = {
 
   async sharePoints(userId, friendId, pointsAmount) {
     try {
-      // Vérifier les points disponibles
-      const { data: userPoints } = await supabase
-        .from('daily_steps')
-        .select('points_earned')
+      const { data: profile } = await supabase
+        .from('profile')
+        .select('points')
         .eq('user_id', userId)
         .single()
 
-      if (!userPoints || userPoints.points_earned < pointsAmount) {
-        throw new Error('Points insuffisants')
+      if (!profile || profile.points < pointsAmount) {
+        throw new Error('Insufficient points')
       }
 
-      // Créer le partage de points
       const { error } = await supabase
-        .from('point_shares')
+        .from('shared_reward')
         .insert({
           sender_id: userId,
           receiver_id: friendId,
-          points_amount: pointsAmount,
+          point: pointsAmount
         })
 
       if (error) throw error
 
-      // Mettre à jour les points de l'utilisateur
       const { error: updateError } = await supabase
-        .from('daily_steps')
+        .from('profile')
         .update({
-          points_earned: userPoints.points_earned - pointsAmount,
+          points: profile.points - pointsAmount
         })
         .eq('user_id', userId)
 
@@ -129,4 +183,4 @@ export const socialService = {
       throw err
     }
   }
-} 
+}

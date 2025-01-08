@@ -1,17 +1,26 @@
 import { supabase } from '../supabase'
 
-// Service pour gérer les opérations liées au profil
 export const profileService = {
   async fetchProfile(userId) {
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profile')
         .select('*')
         .eq('user_id', userId)
+        .eq('archive', false)
         .single()
 
       if (error) throw error
-      return data
+      return {
+        id: data.user_id,
+        email: data.email,
+        phone: data.phone,
+        username: data.user_name,
+        full_name: `${data.first_name} ${data.last_name}`.trim(),
+        avatar_url: data.avatar_url,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      }
     } catch (error) {
       console.error('Error fetching profile:', error)
       throw error
@@ -21,9 +30,16 @@ export const profileService = {
   async updateProfile(updates, userId) {
     try {
       const { error } = await supabase
-        .from('profiles')
-        .update(updates)
+        .from('profile')
+        .update({
+          user_name: updates.username,
+          first_name: updates.full_name?.split(' ')[0] || '',
+          last_name: updates.full_name?.split(' ').slice(1).join(' ') || '',
+          email: updates.email,
+          phone: updates.phone
+        })
         .eq('user_id', userId)
+        .eq('archive', false)
 
       if (error) throw error
     } catch (error) {
@@ -58,17 +74,26 @@ export const profileService = {
   async fetchActivities(userId) {
     try {
       const { data, error } = await supabase
-        .from('daily_steps')
+        .from('daily_points')
         .select('*')
         .eq('user_id', userId)
         .order('date', { ascending: false })
         .limit(30)
 
       if (error) throw error
-      return data
+      return data.map(activity => ({
+        id: activity.id,
+        user_id: activity.user_id,
+        date: activity.date,
+        steps_count: activity.steps_count,
+        points_earned: activity.points,
+        note: activity.note,
+        created_at: activity.created_at,
+        updated_at: activity.updated_at
+      }))
     } catch (error) {
       console.error('Error fetching activities:', error)
       throw error
     }
   }
-} 
+}

@@ -1,16 +1,15 @@
 import { supabase } from '../supabase'
 
-// Mappers
 const mapRewardFromDB = (dbReward) => {
   if (!dbReward) return null
   return {
     id: dbReward.id,
-    title: dbReward.title || '',
+    title: dbReward.label || '',
     description: dbReward.description || '',
-    pointsCost: dbReward.points_cost || 0,
+    pointsCost: dbReward.point || 0,
     partner_id: dbReward.partner_id || null,
     stock: dbReward.stock || 0,
-    imageUrl: dbReward.image_url || ''
+    imageUrl: dbReward.image || ''
   }
 }
 
@@ -19,20 +18,18 @@ const mapOrderFromDB = (dbOrder) => {
   return {
     id: dbOrder.id,
     createdAt: dbOrder.created_at,
-    status: dbOrder.status || 'pending',
+    status: dbOrder.type || 'pending',
     totalPoints: dbOrder.total_points || 0,
-    items: (dbOrder.reward_order_items || []).map(item => ({
+    items: (dbOrder.recompense || []).map(item => ({
       id: item.id,
-      quantity: item.quantity || 1,
-      pointsCost: item.points_cost || 0,
+      quantity: item.nombre || 1,
+      pointsCost: item.point || 0,
       reward: item.reward ? mapRewardFromDB(item.reward) : null
     }))
   }
 }
 
-// API calls
 export const rewardsApi = {
-  // Vérifier si l'utilisateur a assez de points
   async checkUserPoints(userId, requiredPoints) {
     try {
       const { data, error } = await supabase
@@ -49,16 +46,16 @@ export const rewardsApi = {
     }
   },
 
-  // Récupérer toutes les récompenses disponibles
   async fetchAvailableRewards() {
     try {
       const { data, error } = await supabase
-        .from('rewards')
+        .from('reward')
         .select('*')
         .gt('stock', 0)
-        .order('points_cost', { ascending: true })
+        .eq('archive', false)
+        .order('point', { ascending: true })
+
       if (error) throw error
-    
       return (data || []).map(mapRewardFromDB)
     } catch (error) {
       console.error('Error fetching rewards:', error)
@@ -66,32 +63,32 @@ export const rewardsApi = {
     }
   },
 
-  // Récupérer l'historique des commandes d'un utilisateur
   async fetchUserOrders(userId) {
     try {
       const { data, error } = await supabase
-        .from('reward_orders')
+        .from('commande')
         .select(`
           id,
           created_at,
-          status,
+          type,
           total_points,
-          reward_order_items!inner (
+          recompense!inner (
             id,
-            quantity,
-            points_cost,
-            reward:rewards (
+            nombre,
+            point,
+            reward:reward (
               id,
-              title,
+              label,
               description,
-              image_url,
-              points_cost,
+              image,
+              point,
               stock
             )
           )
         `)
         .eq('user_id', userId)
-        .eq('status', 'completed')
+        .eq('type', 'completed')
+        .eq('archive', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -102,69 +99,62 @@ export const rewardsApi = {
     }
   },
 
-  // Créer une nouvelle commande
   async createOrder(userId, items, totalPoints) {
     try {
-      // Vérifier les points disponibles
       const hasEnoughPoints = await this.checkUserPoints(userId, totalPoints)
       if (!hasEnoughPoints) {
-        throw new Error('Points insuffisants')
+        throw new Error('Insufficient points')
       }
 
-      // Créer la commande
       const { data: order, error: orderError } = await supabase
-        .from('reward_orders')
+        .from('commande')
         .insert({
           user_id: userId,
-          status: 'pending',
-          total_points: totalPoints
+          type: 'pending',
+          total_points: totalPoints,
+          archive: false
         })
         .select()
         .single()
 
       if (orderError) throw orderError
 
-      // Ajouter les items
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        reward_id: item.id,
-        quantity: item.quantity,
-        points_cost: item.pointsCost
-      }))
-
-      // Insérer les items un par un
-      for (const item of orderItems) {
+      for (const item of items) {
         const { error: itemError } = await supabase
-          .from('reward_order_items')
-          .insert(item)
+          .from('recompense')
+          .insert({
+            article_id: order.id,
+            reward_id: item.id,
+            nombre: item.quantity,
+            point: item.pointsCost,
+            archive: false
+          })
 
         if (itemError) {
-          // Annuler la commande en cas d'erreur
           await this.cancelOrder(order.id)
           throw itemError
         }
       }
 
-      // Finaliser la commande
       const { data: completedOrder, error: updateError } = await supabase
-        .from('reward_orders')
-        .update({ status: 'completed' })
+        .from('commande')
+        .update({ type: 'completed' })
         .eq('id', order.id)
         .select(`
           id,
           created_at,
-          status,
+          type,
           total_points,
-          reward_order_items!inner (
+          recompense!inner (
             id,
-            quantity,
-            points_cost,
-            reward:rewards (
+            nombre,
+            point,
+            reward:reward (
               id,
-              title,
+              label,
               description,
-              image_url,
-              points_cost,
+              image,
+              point,
               stock
             )
           )
@@ -179,12 +169,11 @@ export const rewardsApi = {
     }
   },
 
-  // Annuler une commande
   async cancelOrder(orderId) {
     try {
       const { error } = await supabase
-        .from('reward_orders')
-        .update({ status: 'cancelled' })
+        .from('commande')
+        .update({ type: 'cancelled', archive: true })
         .eq('id', orderId)
 
       if (error) throw error
@@ -194,36 +183,50 @@ export const rewardsApi = {
     }
   },
 
-  // Récupérer les commandes d'un partenaire
   async fetchPartnerOrders(partnerId) {
     try {
       const { data, error } = await supabase
-        .from('reward_orders')
+        .from('commande')
         .select(`
           id,
           created_at,
-          status,
+          type,
           total_points,
-          reward_order_items!inner (
+          recompense!inner (
             id,
-            quantity,
-            points_cost,
-            reward:rewards (
+            nombre,
+            point,
+            reward:reward (
               id,
-              title,
+              label,
               description,
-              image_url
+              image
             )
           )
         `)
         .eq('partner_id', partnerId)
+        .eq('archive', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data
+      return data.map(order => ({
+        ...order,
+        status: order.type,
+        reward_order_items: order.recompense.map(item => ({
+          id: item.id,
+          quantity: item.nombre,
+          points_cost: item.point,
+          reward: item.reward ? {
+            id: item.reward.id,
+            title: item.reward.label,
+            description: item.reward.description,
+            image_url: item.reward.image
+          } : null
+        }))
+      }))
     } catch (error) {
       console.error('Error fetching partner orders:', error)
       throw error
     }
   }
-} 
+}
