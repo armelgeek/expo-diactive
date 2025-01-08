@@ -23,7 +23,7 @@ export const AddReviewModal = ({
       onBackdropPress={onClose}
       overlayStyle={styles.overlay}
     >
-      <Text h4 style={styles.title}>Donner votre avis</Text>
+      <Text  style={styles.title}>Donner votre avis</Text>
       
       <Rating
         startingValue={rating}

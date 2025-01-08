@@ -1,0 +1,1108 @@
+sup: orders
+id
+user_id
+partner_id
+total_points
+created_at
+updated_at
+type
+completed_at
+
+order_items
+id
+order_id
+reward_id
+product_id
+quantity
+points_cost
+created_at
+updated_at
+
+supdiact: commande
+
+id
+user_id
+product_id
+quantity
+total_price
+created_at
+updated_at
+validator_id
+partner_id
+prix
+archive
+
+sup: rewards
+id
+partner_id
+title
+description
+image_url
+points_cost
+stock
+created_at
+updated_at
+
+
+
+supdiact: reward
+id
+product_id
+label
+description
+point 
+selection_count
+image
+
+
+sup: daily_steps
+id
+user_id
+date
+steps_count
+points_earned
+created_at
+updated_at
+note
+
+supdiact: daily_points
+id
+user_id
+points
+date
+
+
+sup: not have
+
+supdiactive: profile_partner
+id
+user_name,
+adresse
+first_name
+last_name
+activated
+archive
+partner_id
+user_id
+
+
+sup: partners
+id
+user_id
+company_name
+description
+logo_url
+website_url
+status
+created_at
+updated_at
+category_id
+
+supactive: partner
+id
+nom
+description
+logo
+address
+type_id
+note
+archive
+
+sup: partner_categories
+id
+name,
+description,
+icon_name,
+created_at,
+updated_at
+
+supdiactive: partner_type
+id
+label
+status
+archive
+
+
+
+sup: products
+id
+partner_id
+title
+description
+points_price
+image_url
+category
+avalaible
+created_at
+updated_at
+stock
+updated_at
+
+supdiactive: product
+id
+partner_id
+category_id
+level
+quantity
+price
+created_at
+updated_at
+archive
+
+sup: category
+id
+name
+icon
+created_at
+
+supdiactive: category
+id
+parentid
+label
+created_at
+updated_at
+archive
+
+
+sup: profiles
+id
+email
+phone
+username 
+full_name
+avatar_url
+created_at
+updated_at
+is_admin
+
+supdiactive: profile
+id
+user_id
+user_name
+first_name
+last_name
+photo
+points
+activated
+archive
+adresse
+type
+phone
+avatar_url
+
+sup: donations
+id
+user_id
+institute_id
+points_amount
+created_at
+
+supdiactive: donation
+id
+sender_id
+point
+created_at
+updated_at
+sos_diactive_plus_id
+
+sup: institutes
+id
+name
+description
+logo_url
+website_url
+created_at
+updated_at
+points_goal
+current_points
+
+supdiactive: sos_diactive_plus
+id
+name
+description
+project_presentation
+type
+point_objective
+points
+created_at
+updated_at
+archive
+
+supdiactive: recompense
+id
+created_at
+article_id
+profile_id
+nombre
+archive
+
+supdiactive: article
+id
+created_at
+partner_id
+label
+quandity
+critere
+archive
+
+
+sup: friendships
+id
+user_id
+friend_id
+status
+created_at
+updated_at
+
+supdiactive: contacts
+id
+user_id
+contact_id
+created_at
+
+supdiactive: contacts_requests
+id
+from_user_id
+to_user_id
+status
+created_at
+updated_at
+
+
+sup: user_rewards
+supdiactive: profile_reward
+id
+user_id
+reward_id
+redeemed_at
+status
+created_at
+updated_at
+
+sup: invite_contacts
+id
+inviter_id
+invitee_id
+full_name
+email
+phone
+status
+created_at
+updated_at
+
+sup: point_shares
+id
+sender_id
+receiver_id
+points
+status
+created_at
+updated_at
+
+supdiactive: shared_reward
+id
+receiver_id
+sender_id
+point
+created_at
+updated_at
+
+supdiactive: transfert
+id
+sender
+receiver
+value
+created_at
+updated_at
+message
+
+
+Database functions
+- admin_give_points
+arguments: target_user_id(uuid), points(int), reason(text)
+return : void
+security: Definer
+definition: 
+declare
+    today date := current_date;
+begin
+    -- Insérer ou mettre à jour les pas pour aujourd'hui
+    insert into daily_steps (
+        user_id,
+        date,
+        steps_count,
+        points_earned,
+        note
+    ) values (
+        target_user_id,
+        today,
+        0,  -- Pas de pas pour les points administratifs
+        points_amount,
+        reason
+    )
+    on conflict (user_id, date) do update
+    set 
+        points_earned = daily_steps.points_earned + points_amount,
+        note = case 
+            when daily_steps.note is null then reason
+            else daily_steps.note || ' + ' || reason
+        end;
+
+    -- Mettre à jour les points cumulés dans la table users
+    update public.users
+    set cumulative_points = (
+        select coalesce(sum(points_earned), 0)
+        from daily_steps
+        where user_id = target_user_id
+    )
+    where id = target_user_id;
+
+    -- Notifier le changement pour rafraîchir l'interface
+    perform pg_notify(
+        'points_updated',
+        json_build_object(
+            'user_id', target_user_id,
+            'points_added', points_amount,
+            'reason', reason
+        )::text
+    );
+end;
+
+
+calculate_spent_points:
+arguments: user_id(uuid)
+return : integer
+security: Definer
+definition:
+
+declare
+    total_spent integer;
+begin
+    -- Points dépensés en dons
+    select coalesce(sum(points_amount), 0) into total_spent
+    from donations
+    where donations.user_id = calculate_spent_points.user_id;
+
+    -- Ajouter les points dépensés en récompenses
+    total_spent := total_spent + (
+        select coalesce(sum(roi.points_cost * roi.quantity), 0)
+        from reward_orders ro
+        join reward_order_items roi on roi.order_id = ro.id
+        where ro.user_id = calculate_spent_points.user_id
+        and ro.status != 'cancelled'
+    );
+
+    return total_spent;
+end;
+
+
+check_and_update_reward_stock:
+arguments: 
+return : trigger
+security: Definer
+definition:
+declare
+    current_stock integer;
+begin
+    -- Vérifier le stock actuel
+    select stock into current_stock
+    from rewards
+    where id = NEW.reward_id;
+
+    if current_stock < NEW.quantity then
+        raise exception 'Stock insuffisant pour la récompense %', NEW.reward_id;
+    end if;
+
+    -- Mettre à jour le stock
+    update rewards
+    set stock = stock - NEW.quantity
+    where id = NEW.reward_id;
+
+    return NEW;
+end;
+
+
+check_and_validate_points:
+arguments: user_id(uuid), points_needed(integer)
+return : boolean
+security: Definer
+definition:
+
+
+begin
+    -- Vérifier si l'utilisateur a assez de points
+    if not has_enough_points(user_id, points_needed) then
+        raise exception 'Points insuffisants. Disponible: %, Requis: %', 
+            get_available_points(user_id), 
+            points_needed;
+    end if;
+    return true;
+end;
+
+
+check_points_before_donation: 
+arguments: 
+return : trigger
+security: Invoker
+definition:
+
+
+begin
+    perform check_and_validate_points(NEW.user_id, NEW.points_amount);
+    return NEW;
+end;
+
+
+check_points_before_product_order:
+arguments: 
+return : trigger
+security: Definer
+definition:
+
+
+BEGIN
+    -- Vérifier les points uniquement lors de la finalisation de la commande
+    IF NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') THEN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM has_enough_points(p_user_id := NEW.user_id, required_points := NEW.total_points)
+            WHERE has_enough_points = true
+        ) THEN
+            RAISE EXCEPTION 'Points insuffisants';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+
+
+check_points_before_reward_order:
+arguments: 
+return : trigger
+security: Invoker
+definition:
+
+
+
+declare
+    total_cost integer;
+begin
+    -- Calculer le coût total de la commande
+    select sum(r.points_cost * NEW.quantity) into total_cost
+    from rewards r
+    where r.id = NEW.reward_id;
+
+    -- Vérifier si l'utilisateur a assez de points
+    perform check_and_validate_points(
+        (select user_id from reward_orders where id = NEW.order_id),
+        total_cost
+    );
+    return NEW;
+end;
+
+check_product_stock:
+arguments: 
+return : trigger
+security: Definer
+definition:
+
+
+
+DECLARE
+    available_stock integer;
+BEGIN
+    -- Récupérer le stock disponible
+    SELECT stock INTO available_stock
+    FROM products
+    WHERE id = NEW.product_id;
+
+    -- Vérifier si le stock est suffisant
+    IF available_stock < NEW.quantity THEN
+        RAISE EXCEPTION 'Stock insuffisant pour le produit (ID: %)', NEW.product_id;
+    END IF;
+
+    RETURN NEW;
+END;
+
+
+check_reward_order_points:
+arguments: 
+return : trigger
+security: Invoker
+definition:
+
+
+begin
+    -- Vérifier si l'utilisateur a assez de points
+    if not exists (
+        select 1
+        from users
+        where id = NEW.user_id
+        and (select get_available_points(NEW.user_id)) >= NEW.total_points
+    ) then
+        raise exception 'Points insuffisants';
+    end if;
+    return NEW;
+end;
+
+check_reward_stock:
+arguments: 
+return : trigger
+security: Definer
+definition:
+
+
+begin
+    -- Vérifier si l'utilisateur a assez de points
+    if not exists (
+        select 1
+        from users
+        where id = NEW.user_id
+        and (select get_available_points(NEW.user_id)) >= NEW.total_points
+    ) then
+        raise exception 'Points insuffisants';
+    end if;
+    return NEW;
+end;
+
+get_available_points:
+arguments: p_user_id(uuid)
+return : integer
+security: Definer
+definition:
+
+DECLARE
+  total_earned integer;
+  total_spent integer;
+BEGIN
+  -- Calculate total points earned from daily steps
+  SELECT COALESCE(SUM(points_earned), 0)
+  INTO total_earned
+  FROM daily_steps
+  WHERE user_id = p_user_id;
+
+  -- Calculate total points spent on rewards and donations
+  SELECT COALESCE(SUM(total_points), 0)
+  INTO total_spent
+  FROM reward_orders
+  WHERE user_id = p_user_id
+  AND status IN ('pending', 'confirmed', 'completed');
+
+  -- Add points spent on donations
+  total_spent := total_spent + (
+    SELECT COALESCE(SUM(points_amount), 0)
+    FROM donations
+    WHERE user_id = p_user_id
+  );
+
+  -- Return available points
+  RETURN total_earned - total_spent;
+END;
+
+
+get_partner_rating:
+arguments: p_partner_id(uuid)
+return : jsonb
+security: Definer
+definition:
+
+
+declare
+  result jsonb;
+begin
+  select jsonb_build_object(
+    'average', coalesce(avg(rating)::numeric(10,2), 0),
+    'count', count(*)
+  )
+  into result
+  from public.reviews
+  where partner_id = p_partner_id;
+  
+  return result;
+end;
+
+
+get_partner_stats:
+arguments: p_partner_id(uuid)
+return : json
+security: Definer
+definition:
+
+
+
+declare
+  total_orders integer;
+  total_items integer;
+  total_points integer;
+  best_rewards json;
+begin
+  -- Get total orders count
+  select count(distinct roi.order_id)
+  into total_orders
+  from public.reward_order_items roi
+  join public.rewards r on r.id = roi.reward_id
+  where r.partner_id = p_partner_id
+  and exists (
+    select 1 
+    from public.reward_orders ro 
+    where ro.id = roi.order_id 
+    and ro.status = 'completed'
+  );
+
+  -- Get total items sold
+  select coalesce(sum(roi.quantity), 0)
+  into total_items
+  from public.reward_order_items roi
+  join public.rewards r on r.id = roi.reward_id
+  join public.reward_orders ro on ro.id = roi.order_id
+  where r.partner_id = p_partner_id
+  and ro.status = 'completed';
+
+  -- Get total points earned
+  select coalesce(sum(roi.points_cost * roi.quantity), 0)
+  into total_points
+  from public.reward_order_items roi
+  join public.rewards r on r.id = roi.reward_id
+  join public.reward_orders ro on ro.id = roi.order_id
+  where r.partner_id = p_partner_id
+  and ro.status = 'completed';
+
+  -- Get top 5 best-selling rewards
+  select json_agg(reward)
+  into best_rewards
+  from (
+    select 
+      r.id,
+      r.title,
+      r.image_url,
+      sum(roi.quantity) as total_sold,
+      sum(roi.points_cost * roi.quantity) as total_points
+    from public.rewards r
+    left join public.reward_order_items roi on roi.reward_id = r.id
+    left join public.reward_orders ro on ro.id = roi.order_id
+    where r.partner_id = p_partner_id
+    and (ro.status = 'completed' or ro.status is null)
+    group by r.id, r.title, r.image_url
+    order by total_sold desc nulls last
+    limit 5
+  ) reward;
+
+  -- Return statistics as JSON
+  return json_build_object(
+    'total_orders', total_orders,
+    'total_items', total_items,
+    'total_points', total_points,
+    'best_rewards', coalesce(best_rewards, '[]'::json)
+  );
+end;
+
+
+get_top_rewards:
+arguments: p_limit(integer), p_partner_id(uuid)
+return : json
+security: Definer
+definition:
+
+
+begin
+  return (
+    select coalesce(
+      json_agg(reward),
+      '[]'::json
+    )
+    from (
+      select 
+        r.id,
+        r.title,
+        r.description,
+        r.image_url,
+        r.points_cost,
+        r.stock,
+        coalesce(sum(roi.quantity), 0) as total_sold,
+        coalesce(sum(roi.points_cost * roi.quantity), 0) as total_points
+      from public.rewards r
+      left join public.reward_order_items roi on roi.reward_id = r.id
+      left join public.reward_orders ro on ro.id = roi.order_id and ro.status = 'completed'
+      where r.partner_id = p_partner_id
+      group by r.id, r.title, r.description, r.image_url, r.points_cost, r.stock
+      order by total_sold desc nulls last, r.created_at desc
+      limit p_limit
+    ) reward
+  );
+end;
+
+
+get_user_points:
+arguments: p_user_id(uuid)
+return : integer
+security: Definer
+definition:
+
+
+
+DECLARE
+  total_earned integer;
+  total_spent integer;
+BEGIN
+  -- Calculate total points earned
+  SELECT COALESCE(SUM(points), 0)
+  INTO total_earned
+  FROM user_points
+  WHERE user_id = p_user_id
+    AND status = 'confirmed';
+
+  -- Calculate total points spent
+  SELECT COALESCE(SUM(total_points), 0)
+  INTO total_spent
+  FROM reward_orders
+  WHERE user_id = p_user_id
+    AND status IN ('pending', 'confirmed', 'completed');
+
+  -- Return available points
+  RETURN total_earned - total_spent;
+END;
+
+
+get_weekly_stats:
+arguments: p_user_id(uuid)
+return : TABLE(date date, steps_count integer, points_earned integer)
+security: Definer
+definition:
+
+begin
+    return query
+    with dates as (
+        select generate_series(
+            date_trunc('day', now()) - interval '6 days',
+            date_trunc('day', now()),
+            interval '1 day'
+        )::date as date
+    )
+    select
+        d.date,
+        coalesce(ds.steps_count, 0) as steps_count,
+        coalesce(ds.points_earned, 0) as points_earned
+    from dates d
+    left join daily_steps ds on ds.date = d.date and ds.user_id = get_weekly_stats.user_id
+    order by d.date desc;
+end;
+
+handle_new_user:
+arguments: p_user_id(uuid)
+return : trigger
+security: Definer
+definition:
+
+
+begin
+    insert into public.users (id)
+    values (new.id)
+    on conflict (id) do nothing;
+    return new;
+end;
+
+handle_new_user_profile:
+arguments: p_user_id(uuid)
+return : trigger
+security: Definer
+definition:
+
+
+begin
+    insert into public.profiles (user_id)
+    values (new.id)
+    on conflict (user_id) do nothing;
+    return new;
+end;
+
+handle_point_share_acceptance:
+arguments:
+return : trigger
+security: Definer
+definition:
+
+
+begin
+    update public.profiles
+    set points = points + 1
+    where id = p_receiver_id;
+    return new;
+end;
+
+has_enough_points:
+arguments: p_user_id(uuid), required_points(integer)
+return : boolean
+security: Definer
+definition:
+
+
+DECLARE
+    available_points integer;
+BEGIN
+    -- Get available points
+    SELECT * INTO available_points
+    FROM get_available_points(p_user_id);
+
+    -- Return true if user has enough points
+    RETURN available_points >= required_points;
+END;
+
+invite_contacts:
+arguments: contacts jsonb[], inviter_id(uuid)
+return : jsonb
+security: Definer
+definition:
+
+
+declare
+    contact jsonb;
+    inserted_count integer := 0;
+    skipped_count integer := 0;
+begin
+    -- Pour chaque contact
+    foreach contact in array contacts
+    loop
+        -- Essayer d'insérer l'invitation
+        begin
+            insert into invite_contacts (
+                inviter_id,
+                full_name,
+                email,
+                phone,
+                status
+            ) values (
+                inviter_id,
+                contact->>'full_name',
+                contact->>'email',
+                contact->>'phone',
+                'pending'
+            );
+            inserted_count := inserted_count + 1;
+        exception when unique_violation then
+            skipped_count := skipped_count + 1;
+        end;
+    end loop;
+
+    return jsonb_build_object(
+        'inserted', inserted_count,
+        'skipped', skipped_count
+    );
+end;
+
+restore_reward_stock: 
+arguments: 
+return : trigger
+security: Invoker
+definition:
+
+
+begin
+    if NEW.status = 'cancelled' and OLD.status != 'cancelled' then
+        update rewards r
+        set stock = r.stock + roi.quantity
+        from reward_order_items roi
+        where roi.order_id = NEW.id
+        and r.id = roi.reward_id;
+    end if;
+    return NEW;
+end;
+
+
+set_current_timestamp_updated_at:
+arguments: 
+return : trigger
+security: Invoker
+definition:
+
+
+begin
+    new.updated_at = now();
+    return new;
+end;
+
+set_timestamp:
+arguments: 
+return : trigger
+security: Invoker
+definition:
+
+begin
+  new.updated_at = timezone('utc'::text, now());
+  return new;
+end;
+
+update_cumulative_points:
+arguments:
+return : trigger
+security: Invoker
+definition:
+
+begin
+    update auth.users
+    set cumulative_points = cumulative_points + NEW.steps_count
+    where id = NEW.user_id;
+    return NEW;
+end;
+
+update_institute_points:
+arguments:
+return : trigger
+security: Invoker
+definition:
+
+
+
+begin
+    update institutes
+    set current_points = current_points + NEW.points_amount
+    where id = NEW.institute_id;
+    return NEW;
+end;
+
+update_product_stock:
+arguments:
+return : trigger
+security: Definer
+definition:
+
+
+
+BEGIN
+    -- Vérifier si la commande est complétée
+    IF NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') THEN
+        -- Mettre à jour le stock pour chaque item de la commande
+        UPDATE products p
+        SET stock = p.stock - poi.quantity
+        FROM product_order_items poi
+        WHERE poi.order_id = NEW.id
+        AND poi.product_id = p.id;
+    END IF;
+    RETURN NEW;
+END;
+
+update_reward_stock:
+arguments: p_reward_id(uuid), p_quantity(integer)
+return : void
+security: Invoker
+definition:
+
+
+begin
+    update rewards
+    set stock = stock - p_quantity
+    where id = p_reward_id
+    and stock >= p_quantity;
+    
+    if not found then
+        raise exception 'Stock insuffisant';
+    end if;
+end;
+
+
+update_reward_stock:
+arguments:
+return : trigger
+security: Invoker
+definition:
+
+
+begin
+    update rewards
+    set stock = stock - NEW.quantity
+    where id = NEW.reward_id;
+    return NEW;
+end;
+
+update_updated_at_column:
+arguments:
+return : trigger
+security: Invoker
+definition:
+
+
+begin
+    new.updated_at = now();
+    return new;
+end;
+
+update_user_points:
+arguments: p_user_id(uuid), p_points_to_deduct(integer)
+return : trigger
+security: Invoker
+definition:
+
+
+declare
+  available_points integer;
+begin
+  -- Récupérer les points disponibles
+  select get_available_points(p_user_id) into available_points;
+
+  -- Vérifier si l'utilisateur a assez de points
+  if available_points < p_points_to_deduct then
+    raise exception 'Points insuffisants. Disponible: %, Requis: %', available_points, p_points_to_deduct;
+  end if;
+
+  -- Mettre à jour ou créer l'entrée dans daily_steps
+  insert into daily_steps (
+    user_id,
+    date,
+    steps_count,
+    points_earned,
+    note
+  ) values (
+    p_user_id,
+    current_date,
+    0,
+    -p_points_to_deduct,
+    'Points déduits pour achat'
+  )
+  on conflict (user_id, date) do update
+  set points_earned = daily_steps.points_earned - p_points_to_deduct,
+      note = case 
+        when daily_steps.note is null then 'Points déduits pour achat'
+        else daily_steps.note || ' + Points déduits pour achat'
+      end;
+end;
+
+
+Indexation: 
+CREATE UNIQUE INDEX categories_name_key ON public.categories USING btree (name)
+CREATE UNIQUE INDEX categories_pkey ON public.categories USING btree (id)
+CREATE UNIQUE INDEX daily_steps_pkey ON public.daily_steps USING btree (id)
+CREATE UNIQUE INDEX donations_pkey ON public.donations USING btree (id)
+CREATE UNIQUE INDEX friendships_pkey ON public.friendships USING btree (id)
+CREATE UNIQUE INDEX friendships_user_id_friend_id_key ON public.friendships USING btree (user_id, friend_id)
+CREATE UNIQUE INDEX institutes_pkey ON public.institutes USING btree (id)
+CREATE UNIQUE INDEX invite_contacts_pkey ON public.invite_contacts USING btree (id)
+CREATE INDEX order_items_order_id_idx ON public.order_items USING btree (order_id)
+CREATE UNIQUE INDEX order_items_pkey ON public.order_items USING btree (id)
+CREATE INDEX order_items_reward_id_idx ON public.order_items USING btree (reward_id)
+CREATE UNIQUE INDEX order_notifications_pkey ON public.order_notifications USING btree (id)
+CREATE INDEX orders_partner_id_idx ON public.orders USING btree (partner_id)
+CREATE UNIQUE INDEX orders_pkey ON public.orders USING btree (id)
+CREATE INDEX orders_status_idx ON public.orders USING btree (status)
+CREATE INDEX orders_user_id_idx ON public.orders USING btree (user_id)
+CREATE UNIQUE INDEX otp_codes_pkey ON public.otp_codes USING btree (id)
+CREATE UNIQUE INDEX partner_categories_name_key ON public.partner_categories USING btree (name)
+CREATE UNIQUE INDEX partner_categories_pkey ON public.partner_categories USING btree (id)
+CREATE UNIQUE INDEX partners_pkey ON public.partners USING btree (id)
+CREATE UNIQUE INDEX partners_user_id_key ON public.partners USING btree (user_id)
+CREATE UNIQUE INDEX point_shares_pkey ON public.point_shares USING btree (id)
+CREATE UNIQUE INDEX product_order_items_pkey ON public.product_order_items USING btree (id)
+CREATE UNIQUE INDEX product_orders_pkey ON public.product_orders USING btree (id)
+CREATE UNIQUE INDEX products_pkey ON public.products USING btree (id)
+CREATE INDEX profiles_email_idx ON public.profiles USING btree (email)
+CREATE UNIQUE INDEX profiles_email_key ON public.profiles USING btree (email)
+CREATE UNIQUE INDEX profiles_email_key ON public.profiles USING btree (email)
+CREATE INDEX profiles_phone_idx ON public.profiles USING btree (phone)
+CREATE UNIQUE INDEX profiles_username_key ON public.profiles USING btree (username)
+CREATE UNIQUE INDEX review_responses_pkey ON public.review_responses USING btree (id)
+CREATE UNIQUE INDEX review_responses_review_id_key ON public.review_responses USING btree (review_id)
+CREATE UNIQUE INDEX reviews_pkey ON public.reviews USING btree (id)
+CREATE UNIQUE INDEX reward_order_items_pkey ON public.reward_order_items USING btree (id)
+CREATE UNIQUE INDEX reward_orders_pkey ON public.reward_orders USING btree (id)
+CREATE UNIQUE INDEX unique_email_inviter ON public.invite_contacts USING btree (inviter_id, email)
+CREATE UNIQUE INDEX unique_phone_inviter ON public.invite_contacts USING btree (inviter_id, phone)
+CREATE UNIQUE INDEX unique_user_date ON public.daily_steps USING btree (user_id, date)
+CREATE UNIQUE INDEX user_rewards_pkey ON public.user_rewards USING btree (id)
+CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)

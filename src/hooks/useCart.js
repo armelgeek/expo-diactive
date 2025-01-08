@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '../services/supabase'
+import { cart } from '../services/api/cart'
 
 export const useCart = () => {
   const [items, setItems] = useState([])
@@ -8,13 +9,10 @@ export const useCart = () => {
 
   // Ajouter un article au panier
   const addToCart = useCallback((item, type = 'reward') => {
-  
     setItems(currentItems => {
-      // Vérifier si l'article existe déjà
       const existingItem = currentItems.find(i => i.id === item.id && i.type === type)
       
       if (existingItem) {
-        // Mettre à jour la quantité si possible
         if (type === 'reward' && existingItem.quantity >= item.stock) {
           setError('Stock maximum atteint pour cette récompense')
           return currentItems
@@ -26,9 +24,7 @@ export const useCart = () => {
             : i
         )
       }
-      console.log('addToCart', item, type)
 
-      // Ajouter le nouvel article
       return [...currentItems, {
         id: item.id,
         type,
@@ -53,7 +49,6 @@ export const useCart = () => {
       const item = currentItems.find(i => i.id === itemId && i.type === type)
       if (!item) return currentItems
 
-      // Vérifier les limites
       if (newQuantity < 1) {
         return currentItems.filter(i => !(i.id === itemId && i.type === type))
       }
@@ -89,34 +84,12 @@ export const useCart = () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Vous devez être connecté pour passer une commande')
 
-      // Vérifier si l'utilisateur a assez de points
       const totalPoints = getTotalPoints()
       
-      // Récupérer les points disponibles
-      const { data: availablePoints, error: pointsError } = await supabase
-        .rpc('get_available_points', {
-          p_user_id: user.id
-        })
-
-      if (pointsError) throw pointsError
-      if (availablePoints < totalPoints) {
-        throw new Error(`Points insuffisants. Vous avez ${availablePoints || 0} points et il en faut ${totalPoints}.`)
-      }
-
-      // Vérifier les stocks disponibles
-      for (const item of items) {
-        if (item.type === 'reward') {
-          const { data: reward, error: rewardError } = await supabase
-            .from('rewards')
-            .select('stock')
-            .eq('id', item.id)
-            .single()
-
-          if (rewardError) throw rewardError
-          if (!reward || reward.stock < item.quantity) {
-            throw new Error(`Stock insuffisant pour ${item.title}`)
-          }
-        }
+      // Vérifier si l'utilisateur a assez de points
+      const hasEnoughPoints = await cart.checkUserPoints(user.id, totalPoints)
+      if (!hasEnoughPoints) {
+        throw new Error('Points insuffisants')
       }
 
       // Grouper les items par partenaire
@@ -133,32 +106,7 @@ export const useCart = () => {
         const orderTotal = partnerItems.reduce((sum, item) => sum + (item.points_cost * item.quantity), 0)
 
         // Créer la commande
-        const { data: order, error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            user_id: user.id,
-            partner_id: partnerId,
-            status: 'pending',
-            total_points: orderTotal
-          })
-          .select()
-          .single()
-
-        if (orderError) throw orderError
-
-        // Créer les items de la commande
-        const { error: itemsError } = await supabase
-          .from('order_items')
-          .insert(
-            partnerItems.map(item => ({
-              order_id: order.id,
-              [item.type === 'reward' ? 'reward_id' : 'product_id']: item.id,
-              quantity: item.quantity,
-              points_cost: item.points_cost
-            }))
-          )
-
-        if (itemsError) throw itemsError
+        const order = await cart.createOrder(user.id, partnerItems, orderTotal)
 
         // Mettre à jour les stocks si nécessaire
         for (const item of partnerItems) {
