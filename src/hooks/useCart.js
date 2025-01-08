@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
-import { supabase } from '../services/supabase'
-import { cart } from '../services/api/cart'
+import { cart as cartService } from '../services/api/cart'
+import { rewardOrderService } from '../services/api/rewardOrder'
+import { user as userService } from '../services/api/user'
 
 export const useCart = () => {
   const [items, setItems] = useState([])
@@ -81,13 +82,13 @@ export const useCart = () => {
       setLoading(true)
       setError(null)
 
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await userService.getUser()
       if (!user) throw new Error('Vous devez être connecté pour passer une commande')
 
       const totalPoints = getTotalPoints()
       
       // Vérifier si l'utilisateur a assez de points
-      const hasEnoughPoints = await cart.checkUserPoints(user.id, totalPoints)
+      const hasEnoughPoints = await cartService.checkUserPoints(user.id, totalPoints)
       if (!hasEnoughPoints) {
         throw new Error('Points insuffisants')
       }
@@ -106,27 +107,15 @@ export const useCart = () => {
         const orderTotal = partnerItems.reduce((sum, item) => sum + (item.points_cost * item.quantity), 0)
 
         // Créer la commande
-        const order = await cart.createOrder(user.id, partnerItems, orderTotal)
+        const order = await rewardOrderService.createOrder(user.id, partnerItems, orderTotal)
 
         // Mettre à jour les stocks si nécessaire
         for (const item of partnerItems) {
           if (item.type === 'reward') {
-            const { error: stockError } = await supabase.rpc('update_reward_stock', {
-              p_reward_id: item.id,
-              p_quantity: item.quantity
-            })
-            if (stockError) throw stockError
+            await rewardOrderService.updateRewardStock(item.id, item.quantity)
           }
         }
       }
-
-      // Mettre à jour les points de l'utilisateur
-      const { error: updatePointsError } = await supabase.rpc('update_user_points', {
-        p_user_id: user.id,
-        p_points_to_deduct: totalPoints
-      })
-
-      if (updatePointsError) throw updatePointsError
 
       // Vider le panier après succès
       clearCart()
