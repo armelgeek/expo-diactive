@@ -3,7 +3,7 @@ export class Contact {
       this.id = id;
       this.email = email;
       this.username = username;
-      this.fullName = fullName;
+      this.full_name = fullName;
       this.phone = phone;
     }
   }
