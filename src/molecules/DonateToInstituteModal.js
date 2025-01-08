@@ -17,6 +17,16 @@ const DonateToInstituteModal = ({
   const { refreshData } = useSteps()
 
   const handleDonate = async () => {
+   
+    if (isNaN(pointsValue) || pointsValue <= 0) {
+      throw new Error('Montant invalide')
+    }
+    if (pointsValue > maxPoints) {
+      throw new Error('Points insuffisants')
+    }
+
+    setLoading(true)
+    const userId = supabase.auth.user().id
     try {
       const pointsValue = parseInt(points)
       if (isNaN(pointsValue) || pointsValue <= 0) {
@@ -27,32 +37,10 @@ const DonateToInstituteModal = ({
       }
 
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non authentifié')
-
-      // Vérifier si l'utilisateur a toujours assez de points
-      const { data: hasPoints, error: pointsError } = await supabase
-        .rpc('has_enough_points', {
-          p_user_id: user.id,
-          required_points: pointsValue
-        })
-
-      if (pointsError) throw pointsError
-      if (!hasPoints) throw new Error('Points insuffisants')
-
-      // Faire le don
-      const { error: donationError } = await supabase
-        .from('donations')
-        .insert({
-          institute_id: institute.id,
-          user_id: user.id,
-          points_amount: pointsValue,
-        })
-
-      if (donationError) throw donationError
-
-      alert('Don effectué avec succès !')
-   
+      const result = await donationService.makeDonation(institute.id, userId, pointsValue)
+      if (result.goalReached) {
+        // Handle goal reached logic
+      }
       await refreshData()
       onClose()
       setPoints('');

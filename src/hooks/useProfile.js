@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { profileService } from '../services/api/profileService'
 import { supabase } from '../services/supabase'
 
 export const useProfile = () => {
@@ -16,13 +17,8 @@ export const useProfile = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', supabase.auth.user().id)
-        .single()
-
-      if (error) throw error
+      const userId = supabase.auth.user().id
+      const data = await profileService.fetchProfile(userId)
       setProfile(data)
 
       // Charger les statistiques
@@ -31,31 +27,25 @@ export const useProfile = () => {
         rewardsData,
         ordersData
       ] = await Promise.all([
-        // Total des pas
-        supabase
-          .from('daily_steps')
-          .select('steps_count, points_earned')
-          .eq('user_id', supabase.auth.user().id),
-        // Total des récompenses
+        profileService.fetchActivities(userId),
         supabase
           .from('user_rewards')
           .select('id')
-          .eq('user_id', supabase.auth.user().id),
-        // Total des commandes
+          .eq('user_id', userId),
         supabase
           .from('orders')
           .select('id')
-          .eq('user_id', supabase.auth.user().id)
+          .eq('user_id', userId)
       ])
 
-      const totalSteps = stepsData.data.reduce((sum, day) => sum + day.steps_count, 0)
-      const totalPoints = stepsData.data.reduce((sum, day) => sum + day.points_earned, 0)
+      const totalSteps = stepsData.reduce((sum, day) => sum + day.steps_count, 0)
+      const totalPoints = stepsData.reduce((sum, day) => sum + day.points_earned, 0)
 
       setStats({
         totalSteps,
         totalPoints,
-        totalRewards: rewardsData.data.length,
-        totalOrders: ordersData.data.length,
+        totalRewards: rewardsData.length,
+        totalOrders: ordersData.length,
       })
 
     } catch (err) {
@@ -69,12 +59,8 @@ export const useProfile = () => {
   const updateProfile = async (updates) => {
     try {
       setLoading(true)
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('user_id', supabase.auth.user().id)
-
-      if (error) throw error
+      const userId = supabase.auth.user().id
+      await profileService.updateProfile(updates, userId)
       await fetchProfile()
     } catch (err) {
       setError(err.message)
@@ -88,21 +74,9 @@ export const useProfile = () => {
   const updateAvatar = async (uri) => {
     try {
       setLoading(true)
-      const fileName = `avatar-${supabase.auth.user().id}`
-      const response = await fetch(uri)
-      const blob = await response.blob()
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, blob, { upsert: true })
-
-      if (uploadError) throw uploadError
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName)
-
-      await updateProfile({ avatar_url: publicUrl })
+      const userId = supabase.auth.user().id
+      await profileService.updateAvatar(uri, userId)
+      await fetchProfile()
     } catch (err) {
       setError(err.message)
       throw err
@@ -116,14 +90,8 @@ export const useProfile = () => {
   const fetchActivities = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('daily_steps')
-        .select('*')
-        .eq('user_id', supabase.auth.user().id)
-        .order('date', { ascending: false })
-        .limit(30)
-
-      if (error) throw error
+      const userId = supabase.auth.user().id
+      const data = await profileService.fetchActivities(userId)
       setActivities(data)
     } catch (err) {
       setError(err.message)

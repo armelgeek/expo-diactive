@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { pointsApi } from '../services/api/points'
-import { supabase } from '../services/supabase'
+import { user as userService } from '../services/api/user'
 
 export const usePoints = () => {
   const [loading, setLoading] = useState(false)
@@ -10,7 +10,7 @@ export const usePoints = () => {
   const fetchPoints = useCallback(async () => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await userService.getUser()
       if (!user) throw new Error('Non authentifié')
 
       const availablePoints = await pointsApi.getAvailablePoints(user.id)
@@ -25,7 +25,7 @@ export const usePoints = () => {
   const fetchWeeklyStats = useCallback(async () => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await userService.getUser()
       if (!user) throw new Error('Non authentifié')
 
       const stats = await pointsApi.getWeeklyStats(user.id)
@@ -40,7 +40,7 @@ export const usePoints = () => {
   const updateSteps = useCallback(async (stepsCount) => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await userService.getUser()
       if (!user) throw new Error('Non authentifié')
 
       await pointsApi.updateDailySteps(user.id, stepsCount)
@@ -59,7 +59,7 @@ export const usePoints = () => {
   const givePoints = useCallback(async (targetUserId, amount, reason) => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await userService.getUser()
       if (!user) throw new Error('Non authentifié')
 
       await pointsApi.givePoints(user.id, targetUserId, amount, reason)

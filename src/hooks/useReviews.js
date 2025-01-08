@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../services/supabase'
+import { reviewsService } from '../services/api/reviewsService'
 
 export const useReviews = (partnerId) => {
   const [loading, setLoading] = useState(false)
@@ -17,24 +17,7 @@ export const useReviews = (partnerId) => {
   const fetchReviews = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('reviews')
-        .select(`
-          *,
-          user:user_id (
-            email,
-            profiles (username, full_name)
-          ),
-          response:review_responses (
-            id,
-            response,
-            created_at
-          )
-        `)
-        .eq('partner_id', partnerId)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
+      const data = await reviewsService.fetchReviews(partnerId)
       setReviews(data)
 
       // Calculer les statistiques
@@ -59,16 +42,7 @@ export const useReviews = (partnerId) => {
   const addReview = async (rating, comment) => {
     try {
       setLoading(true)
-      const { error } = await supabase
-        .from('reviews')
-        .insert({
-          user_id: supabase.auth.user().id,
-          partner_id: partnerId,
-          rating,
-          comment,
-        })
-
-      if (error) throw error
+      await reviewsService.addReview(partnerId, rating, comment)
       await fetchReviews()
     } catch (err) {
       setError(err.message)
@@ -82,15 +56,7 @@ export const useReviews = (partnerId) => {
   const respondToReview = async (reviewId, response) => {
     try {
       setLoading(true)
-      const { error } = await supabase
-        .from('review_responses')
-        .insert({
-          review_id: reviewId,
-          partner_id: partnerId,
-          response,
-        })
-
-      if (error) throw error
+      await reviewsService.respondToReview(reviewId, partnerId, response)
       await fetchReviews()
     } catch (err) {
       setError(err.message)

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { marketplaceService } from '../services/api/marketplaceService'
+import { marketplaceService } from '../services/api/marketplace'
 
 export const useMarketplace = () => {
   const [loading, setLoading] = useState(false)

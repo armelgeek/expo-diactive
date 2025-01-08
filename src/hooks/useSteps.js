@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { stepsService } from '../services/api/stepsService'
 import { supabase } from '../services/supabase'
 
 export const useSteps = () => {
@@ -11,23 +12,15 @@ export const useSteps = () => {
 
   const fetchUserPoints = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non authentifié')
-
-      // Récupérer les points disponibles
-      const { data: availablePoints, error: pointsError } = await supabase
-        .rpc('get_available_points', { 
-          p_user_id: user.id 
-        })
-
-      if (pointsError) throw pointsError
-      setPoints(availablePoints || 0)
+      const userId = supabase.auth.user().id
+      const availablePoints = await stepsService.fetchUserPoints(userId)
+      setPoints(availablePoints)
 
       // Récupérer les points cumulés
       const { data: cumulativeData, error: cumulativeError } = await supabase
         .from('daily_steps')
         .select('points_earned')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
 
       if (cumulativeError) throw cumulativeError
       const totalPoints = cumulativeData?.reduce((sum, item) => sum + (item.points_earned || 0), 0) || 0
@@ -39,19 +32,9 @@ export const useSteps = () => {
 
   const fetchTodaySteps = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non authentifié')
-
-      const today = new Date().toISOString().split('T')[0]
-      const { data, error } = await supabase
-        .from('daily_steps')
-        .select('steps_count, points_earned')
-        .eq('user_id', user.id)
-        .eq('date', today)
-        .single()
-
-      if (error && error.code !== 'PGRST116') throw error // PGRST116 = not found
-      setSteps(data?.steps_count || 0)
+      const userId = supabase.auth.user().id
+      const todaySteps = await stepsService.fetchTodaySteps(userId)
+      setSteps(todaySteps)
     } catch (err) {
       console.error('Erreur lors de la récupération des pas:', err)
     }
@@ -59,14 +42,9 @@ export const useSteps = () => {
 
   const fetchWeeklyStats = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non authentifié')
-
-      const { data, error } = await supabase
-        .rpc('get_weekly_stats', { user_id: user.id })
-
-      if (error) throw error
-      setWeeklyStats(data || [])
+      const userId = supabase.auth.user().id
+      const stats = await stepsService.fetchWeeklyStats(userId)
+      setWeeklyStats(stats)
     } catch (err) {
       console.error('Erreur lors de la récupération des statistiques:', err)
     }
@@ -75,22 +53,8 @@ export const useSteps = () => {
   const updateSteps = async (newSteps) => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non authentifié')
-
-      const today = new Date().toISOString().split('T')[0]
-      const pointsEarned = Math.floor(newSteps / 100) // 1 point pour 100 pas
-
-      const { error } = await supabase
-        .from('daily_steps')
-        .upsert({
-          user_id: user.id,
-          date: today,
-          steps_count: newSteps,
-          points_earned: pointsEarned,
-        })
-
-      if (error) throw error
+      const userId = supabase.auth.user().id
+      await stepsService.updateSteps(userId, newSteps)
 
       // Rafraîchir toutes les données
       await Promise.all([
