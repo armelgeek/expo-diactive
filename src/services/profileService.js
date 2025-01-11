@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabase } from "./supabase"
 
 export const profileService = {
 	// Get current user and profile

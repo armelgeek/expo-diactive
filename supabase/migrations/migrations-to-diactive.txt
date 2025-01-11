@@ -69,6 +69,7 @@ supdiact: daily_points
 id
 user_id
 points
+steps_count
 date
 
 
