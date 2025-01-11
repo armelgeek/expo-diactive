@@ -52,7 +52,7 @@ export const rewardsApi = {
         .from('reward')
         .select('*')
         .gt('stock', 0)
-        .eq('archive', false)
+        //.eq('archive', false)
         .order('point', { ascending: true })
 
       if (error) throw error
@@ -72,11 +72,11 @@ export const rewardsApi = {
           created_at,
           type,
           total_points,
-          recompense!inner (
+          command_items!inner (
             id,
-            nombre,
-            point,
-            reward:reward (
+            quantite,
+            point_cost,
+            reward:reward_id (
               id,
               label,
               description,
@@ -88,11 +88,28 @@ export const rewardsApi = {
         `)
         .eq('user_id', userId)
         .eq('type', 'completed')
-        .eq('archive', false)
+        //.eq('archive', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return (data || []).map(mapOrderFromDB).filter(Boolean)
+      return (data || []).map(order => ({
+        id: order.id,
+        created_at: order.created_at,
+        total_points: order.total_points,
+        items: order.command_items.map(item => ({
+          id: item.id,
+          quantity: item.quantite,
+          points_cost: item.point,
+          reward: item.reward ? {
+            id: item.reward.id,
+            title: item.reward.label,
+            description: item.reward.description,
+            image_url: item.reward.image,
+            points_cost: item.reward.point,
+            stock: item.reward.stock
+          } : null
+        }))
+      }))
     } catch (error) {
       console.error('Error fetching user orders:', error)
       throw error

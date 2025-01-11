@@ -152,32 +152,59 @@ export const orderService = {
 		const { data, error } = await supabase
 			.from('commande')
 			.select(`
-        *,
-        partner:partner_id (
-          nom,
-          logo
-        ),
-        command_items (
-          id,
-          quantite,
-          point_cost,
-          reward:reward_id (
-            label,
-            description,
-            image
-          ),
-          product:product_id (
-            label,
-            description,
-            photo
-          )
-        )
-      `)
+				id,
+				created_at,
+				status,
+				total_points,
+				partner:partner_id (
+					nom,
+					logo
+				),
+				command_items (
+					id,
+					quantite,
+					point_cost,
+					reward:reward_id (
+						label,
+						description,
+						image
+					),
+					article:article_id (
+						label,
+						description,
+						photo
+					)
+				)
+			`)
 			.eq('user_id', userId)
 			.eq('archive', false)
 			.order('created_at', { ascending: false })
 
 		if (error) throw error
-		return data || []
+
+		// Map the data to match the expected format
+		return data.map(order => ({
+			...order,
+			partner: {
+				...order.partner,
+				company_name: order.partner.nom,
+				logo_url: order.partner.logo
+			},
+			order_items: order.command_items.map(item => ({
+				id: item.id,
+				quantity: item.quantite,
+				points_cost: item.point_cost,
+				reward: item.reward ? {
+					title: item.reward.label,
+					description: item.reward.description,
+					image_url: item.reward.image
+				} : null,
+				product: item.article ? {
+					title: item.article.label,
+					description: item.article.description,
+					image_url: item.article.photo
+				} : null
+			}))
+		}))
 	}
 }

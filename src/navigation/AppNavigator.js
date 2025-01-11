@@ -34,23 +34,23 @@ const Stack = createNativeStackNavigator()
 
 const MarketplaceStack = () => (
   <Stack.Navigator initialRouteName='MarketplaceMain'>
-    <Stack.Screen 
-      name="MarketplaceMain" 
+    <Stack.Screen
+      name="MarketplaceMain"
       component={MarketplaceScreen}
       options={{ title: 'Bons Plans' }}
     />
-    <Stack.Screen 
-      name="PartnerDetails" 
+    <Stack.Screen
+      name="PartnerDetails"
       component={PartnerDetailsScreen}
       options={({ route }) => ({ title: route.params.partner.company_name })}
     />
-    <Stack.Screen 
-      name="ProductDetails" 
+    <Stack.Screen
+      name="ProductDetails"
       component={ProductDetailsScreen}
       options={({ route }) => ({ title: route.params.product.title })}
     />
-    <Stack.Screen 
-      name="Reviews" 
+    <Stack.Screen
+      name="Reviews"
       component={ReviewsScreen}
       options={{ title: 'Avis' }}
     />
@@ -59,8 +59,8 @@ const MarketplaceStack = () => (
 
 const ProfileStack = () => (
   <Stack.Navigator>
-    <Stack.Screen 
-      name="ProfileMain" 
+    <Stack.Screen
+      name="ProfileMain"
       component={ProfileScreen}
       options={{ title: 'Profil' }}
     />
@@ -89,8 +89,8 @@ const ProfileStack = () => (
       component={PartnerSettings}
       options={{ title: 'Paramètres' }}
     />
-    <Stack.Screen 
-      name="Cart" 
+    <Stack.Screen
+      name="Cart"
       component={CartScreen}
       options={{ title: 'Mon panier' }}
     />
@@ -164,7 +164,7 @@ export default function AppNavigator() {
               iconName = 'tag'
               break
             case 'Cart':
-              iconName = 'cart'
+              iconName = 'circle'
               break
             default:
               iconName = 'circle'
@@ -183,36 +183,36 @@ export default function AppNavigator() {
         tabBarInactiveTintColor: 'gray',
       })}
     >
-      <Tab.Screen 
-        name="Dashboard" 
+      <Tab.Screen
+        name="Dashboard"
         component={HomeScreen}
         options={{ title: 'Accueil' }}
       />
-      <Tab.Screen 
-        name="Rewards" 
+      <Tab.Screen
+        name="Rewards"
         component={RewardsScreen}
         options={{ title: 'Récompenses' }}
       />
-      <Tab.Screen 
-        name="Social" 
+      <Tab.Screen
+        name="Social"
         component={SocialScreen}
         options={{ title: 'Social' }}
       />
-      <Tab.Screen 
-        name="Marketplace" 
+      <Tab.Screen
+        name="Marketplace"
         component={MarketplaceStack}
         options={{ headerShown: false }}
       />
-      <Tab.Screen 
-        name="Profile" 
+      <Tab.Screen
+        name="Profile"
         component={ProfileStack}
         options={{ headerShown: false }}
       />
-      <Tab.Screen 
-        name="Cart" 
+      <Tab.Screen
+        name="Cart"
         component={CartScreen}
         options={{ title: 'Mon Panier' }}
       />
     </Tab.Navigator>
   )
-} 
+}

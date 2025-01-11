@@ -18,7 +18,7 @@ export const useRewards = () => {
         id: item.id,
         title: item.title,
         description: item.description,
-        points_cost: item.pointsCost,
+        points_cost: item.point,
         imageUrl: item.image_url,
         partner_id: item.partner_id,
         stock: item.stock
@@ -137,4 +137,4 @@ export const useRewards = () => {
       ])
     }, [fetchRewards, fetchUserOrders])
   }
-} 
+}

@@ -23,10 +23,9 @@ export const RewardsScreen = ({ navigation }) => {
       setError(err.message)
     }
   }, [addToCart])
-  console.log('rewards', rewards) 
   return (
     <View style={styles.container}>
-      <ScrollView 
+      <ScrollView
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={fetchRewards} />
         }
@@ -47,10 +46,10 @@ export const RewardsScreen = ({ navigation }) => {
             <Card.Content>
               <Text variant="titleLarge">{reward.title}</Text>
               <View style={styles.partnerInfo}>
-                <MaterialCommunityIcons 
-                  name="store" 
-                  size={16} 
-                  color="#666" 
+                <MaterialCommunityIcons
+                  name="store"
+                  size={16}
+                  color="#666"
                 />
                 <Text variant="bodyMedium" style={styles.partnerName}>
                   {reward.partner?.company_name}
@@ -69,7 +68,7 @@ export const RewardsScreen = ({ navigation }) => {
               </View>
             </Card.Content>
             <Card.Actions>
-              <Button 
+              <Button
                 mode="contained"
                 onPress={() => handleAddToCart({...reward, type: 'reward'})}
                 disabled={reward.stock < 1}
@@ -148,4 +147,4 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 32,
   },
-}) 
+})
