@@ -42,10 +42,14 @@ export default function SocialScreen({navigation}) {
 
       // Vérifier quels contacts sont sur l'application
       const { data: users, error: usersError } = await supabase
-        .from('profiles')
-        .select('id, full_name, phone')
+        .from('profile')
+        .select('id, user_name, phone')
         .in('phone', contactsWithPhones.map(c => c.phoneNumber))
 
+        users.map(user => {
+          user.full_name = user.user_name
+          return user
+        })
       if (usersError) throw usersError
 
       setAppUsers(users || [])
@@ -62,7 +66,7 @@ export default function SocialScreen({navigation}) {
     try {
       const message = 'Rejoins-nous sur DiActive ! Une super app pour gagner des points en marchant et les échanger contre des récompenses.'
       const phoneNumber = contact.phoneNumber
-      
+
       // Construire l'URL pour le SMS
       let url
       if (Platform.OS === 'android') {
@@ -223,4 +227,4 @@ const styles = StyleSheet.create({
   button: {
     margin: 16,
   },
-}) 
+})

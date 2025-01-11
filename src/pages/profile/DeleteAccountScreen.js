@@ -25,9 +25,9 @@ export const DeleteAccountScreen = ({ navigation }) => {
 
       // Supprimer les données de l'utilisateur
       const { error: profileError } = await supabase
-        .from('profiles')
+        .from('profile')
         .delete()
-        .eq('id', user.id)
+        .eq('user_id', user.id)
 
       if (profileError) throw profileError
 
@@ -155,4 +155,4 @@ const styles = StyleSheet.create({
     color: '#B00020',
     marginBottom: 16,
   },
-}) 
+})

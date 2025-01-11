@@ -33,10 +33,10 @@ export const ForgotPasswordScreen = ({ navigation }) => {
 
       // Vérifier si l'utilisateur existe
         const { data: user, error:userError } = await supabase
-        .from('profiles')
-        .select('id, email')  
+        .from('profile')
+        .select('id, email')
         .eq('email', email.toLowerCase())
-    
+
       if (userError || !user) {
         throw new Error('Aucun compte associé à cette adresse email')
       }
@@ -55,7 +55,7 @@ export const ForgotPasswordScreen = ({ navigation }) => {
       // Ici, vous pouvez utiliser un service d'envoi d'e-mails pour envoyer le code OTP
 
       setMessage('Un code de vérification a été envoyé à votre adresse email')
-      
+
       // Naviguer vers la page de vérification OTP
       setTimeout(() => {
         navigation.navigate( 'VerifyOTP', { email, otp })
@@ -74,7 +74,7 @@ export const ForgotPasswordScreen = ({ navigation }) => {
         <Text variant="headlineMedium" style={styles.title}>
           Mot de passe oublié
         </Text>
-        
+
         <Text variant="bodyMedium" style={styles.description}>
           Entrez votre adresse email pour recevoir un code de vérification
         </Text>
@@ -165,4 +165,4 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
-}) 
+})

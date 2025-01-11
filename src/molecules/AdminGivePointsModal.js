@@ -20,7 +20,7 @@ export const AdminGivePointsModal = ({
 
       // Trouver l'utilisateur par email
       const { data: userData, error: userError } = await supabase
-        .from('profiles')
+        .from('profile')
         .select('id')
         .eq('email', email)
         .single()
@@ -63,7 +63,7 @@ export const AdminGivePointsModal = ({
     >
       <View style={styles.container}>
         <Text h4 style={styles.title}>Donner des points</Text>
-        
+
         <Input
           placeholder="Email de l'utilisateur"
           value={email}
@@ -122,4 +122,4 @@ const styles = StyleSheet.create({
   button: {
     width: '45%',
   },
-}) 
+})

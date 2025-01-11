@@ -6,11 +6,11 @@ export const partnerService = {
 		const { data, error } = await supabase
 			.from('partner')
 			.select(`
-        *,
-        type:type_id (
-          label
-        )
-      `)
+				*,
+				type:type_id (
+				label
+				)
+			`)
 			.eq('archive', false)
 			.order('nom')
 
@@ -45,7 +45,7 @@ export const partnerService = {
 			Object.assign(partner, {
 				company_name: partner.nom,
 				logo_url: partner.logo,
-				category_id: partner.type_id
+				category_id: partner.type_id,
 			}, { nom: undefined, logo: undefined, type_id: undefined });
 		})
 
@@ -80,6 +80,7 @@ export const partnerService = {
           price,
           photo,
           quantity,
+		  points_cost,
           archive
         )
       `)
@@ -236,7 +237,10 @@ export const partnerService = {
 		return data.map(article => ({
 			...article,
 			title: article.label,
-			image_url: article.photo
+			description: article.description,
+			image_url: article.photo,
+			points_price: article.points_cost,
+			available: article.quantity > 0
 		}))
 	},
 

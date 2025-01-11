@@ -715,3 +715,4 @@ $$;
 add status field in contacts table
 add status field in transfert table
 add message field in transfert table
+add points_cost field article table

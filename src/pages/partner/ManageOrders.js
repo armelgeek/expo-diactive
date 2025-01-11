@@ -22,7 +22,7 @@ export const ManageOrders = () => {
           created_at,
           status,
           total_points,
-          user:profiles!orders_user_id_fkey (
+          user:profile!orders_user_id_fkey (
             full_name,
             email
           ),
@@ -112,10 +112,10 @@ export const ManageOrders = () => {
   }
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       refreshControl={
-        <RefreshControl 
+        <RefreshControl
           refreshing={loading}
           onRefresh={fetchOrders}
         />
@@ -256,4 +256,4 @@ const styles = StyleSheet.create({
     marginTop: 20,
     padding: 20,
   },
-}) 
+})
