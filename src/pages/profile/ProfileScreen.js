@@ -15,6 +15,10 @@ import { TextInput } from 'react-native-paper'
 import { PartnerSection } from './components/PartnerSection'
 import { ChangePasswordScreen } from './ChangePasswordScreen'
 import { DeleteAccountScreen } from './DeleteAccountScreen'
+import { profileService } from '../../services/profileService'
+import { rewardsService } from '../../services/rewardsService'
+import { donationsService } from '../../services/donationsService'
+import { friendsService } from '../../services/friendsService'
 
 export default function ProfileScreen() {
   const { points, cumulativePoints, loading: loadingSteps, refreshData, weeklyStats } = useSteps()
@@ -42,23 +46,16 @@ export default function ProfileScreen() {
   })
   const fetchProfile = async () => {
     try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { user: currentUser, profile: currentProfile } = await profileService.getCurrentUserAndProfile()
       if (!currentUser) return
+
       setUser(currentUser)
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single()
-
-      if (error) throw error
-      setProfile(data)
+      setProfile(currentProfile)
       setFormData({
-        full_name: data.full_name || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        avatar_url: data.avatar_url || ''
+        full_name: currentProfile.full_name || '',
+        email: currentProfile.email || '',
+        phone: currentProfile.phone || '',
+        avatar_url: currentProfile.avatar_url || ''
       })
     } catch (err) {
       console.error('Erreur lors de la récupération du profil:', err)
@@ -67,42 +64,9 @@ export default function ProfileScreen() {
 
   const fetchRewards = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          created_at,
-          status,
-          order_items!inner (
-            quantity,
-            points_cost,
-            reward:rewards (
-              title,
-              description,
-              image_url
-            )
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false })
-        .limit(5)
-
-      if (error) throw error
-
-      // Transformer les données pour l'affichage
-      const formattedRewards = data.map(order => ({
-        id: order.id,
-        created_at: order.created_at,
-        ...order.order_items[0]?.reward,
-        quantity: order.order_items[0]?.quantity,
-        points_cost: order.order_items[0]?.points_cost
-      })).filter(reward => reward.title) // Ne garder que les commandes avec des récompenses
-
-      setRewards(formattedRewards)
+      const rewardsData = await rewardsService.getUserRewards(user.id)
+      setRewards(rewardsData)
     } catch (err) {
       console.error('Erreur lors de la récupération des récompenses:', err)
     }
@@ -110,23 +74,9 @@ export default function ProfileScreen() {
 
   const fetchDonations = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-
-      const { data, error } = await supabase
-        .from('donations')
-        .select(`
-          *,
-          institute:institutes (
-            name
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5)
-
-      if (error) throw error
-      setDonations(data)
+      const donationsData = await donationsService.getUserDonations(user.id)
+      setDonations(donationsData)
     } catch (err) {
       console.error('Erreur lors de la récupération des dons:', err)
     }
@@ -134,41 +84,14 @@ export default function ProfileScreen() {
 
   const fetchFriends = async () => {
     try {
-      setLoadingFriends(true)
-      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-
-      // Récupérer les amis (relations acceptées)
-      const { data: friendsData, error: friendsError } = await supabase
-        .from('friendships')
-        .select(`
-          friend:profiles!friendships_friend_id_fkey (
-            id,
-            full_name,
-            email
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'accepted')
-
-      if (friendsError) throw friendsError
-      setFriends(friendsData.map(f => f.friend))
-
-      // Récupérer les demandes d'amis en attente
-      const { data: requestsData, error: requestsError } = await supabase
-        .from('friendships')
-        .select(`
-          user:profiles!friendships_user_id_fkey (
-            id,
-            full_name,
-            email
-          )
-        `)
-        .eq('friend_id', user.id)
-        .eq('status', 'pending')
-
-      if (requestsError) throw requestsError
-      setFriendRequests(requestsData.map(r => r.user))
+      setLoadingFriends(true)
+      const [friendsData, requestsData] = await Promise.all([
+        friendsService.getUserFriends(user.id),
+        friendsService.getFriendRequests(user.id)
+      ])
+      setFriends(friendsData)
+      setFriendRequests(requestsData)
     } catch (err) {
       console.error('Erreur lors de la récupération des amis:', err)
     } finally {
@@ -180,27 +103,7 @@ export default function ProfileScreen() {
     try {
       if (!friendEmail) return
       setLoadingFriends(true)
-
-      // Trouver l'utilisateur par email
-      const { data: friendData, error: friendError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', friendEmail)
-        .single()
-
-      if (friendError) throw new Error("Utilisateur non trouvé")
-
-      // Envoyer la demande d'ami
-      const { error: requestError } = await supabase
-        .from('friendships')
-        .insert({
-          user_id: user.id,
-          friend_id: friendData.id,
-          status: 'pending'
-        })
-
-      if (requestError) throw requestError
-
+      await friendsService.addFriend(user.id, friendEmail)
       alert("Demande d'ami envoyée !")
       setFriendEmail('')
       setShowAddFriend(false)
@@ -213,35 +116,10 @@ export default function ProfileScreen() {
 
   const handleFriendRequest = async (friendId, accept) => {
     try {
-      setLoadingFriends(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      if (accept) {
-        // Accepter la demande
-        const { error } = await supabase
-          .from('friendships')
-          .update({ status: 'accepted' })
-          .eq('user_id', friendId)
-          .eq('friend_id', user.id)
-
-        if (error) throw error
-      } else {
-        // Refuser la demande
-        const { error } = await supabase
-          .from('friendships')
-          .delete()
-          .eq('user_id', friendId)
-          .eq('friend_id', user.id)
-
-        if (error) throw error
-      }
-
+      await friendsService.handleFriendRequest(user.id, friendId, accept)
       await fetchFriends()
     } catch (err) {
-      console.error("Erreur lors du traitement de la demande d'ami:", err)
-    } finally {
-      setLoadingFriends(false)
+      console.error('Erreur lors du traitement de la demande d\'ami:', err)
     }
   }
   const pickImage = async () => {
@@ -287,24 +165,14 @@ export default function ProfileScreen() {
   const handleSave = async () => {
     try {
       setLoading(true)
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: formData.full_name,
-          phone: formData.phone,
-          avatar_url: formData.avatar_url,
-          updated_at: new Date()
-        })
-        .eq('id', profile.id)
+      await profileService.updateProfile(profile.id, {
+        full_name: formData.full_name,
+        phone: formData.phone,
+        avatar_url: formData.avatar_url
+      })
 
-      if (error) throw error
-
-      // Mettre à jour l'email si nécessaire
       if (formData.email !== profile.email) {
-        const { error: emailError } = await supabase.auth.updateUser({
-          email: formData.email
-        })
-        if (emailError) throw emailError
+        await profileService.updateEmail(formData.email)
       }
 
       await fetchProfile()
@@ -320,8 +188,7 @@ export default function ProfileScreen() {
 
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
+      await profileService.signOut()
     } catch (err) {
       console.error('Erreur lors de la déconnexion:', err)
     }
@@ -352,18 +219,8 @@ export default function ProfileScreen() {
 
   const checkAdminStatus = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      // Vérifier si l'utilisateur est un admin (vous pouvez adapter la logique selon vos besoins)
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single()
-
-      if (error) throw error
-      setIsAdmin(data?.is_admin || false)
+      const isAdmin = await profileService.checkAdminStatus()
+      setIsAdmin(isAdmin)
     } catch (err) {
       console.error('Erreur lors de la vérification du statut admin:', err)
     }
@@ -374,11 +231,11 @@ export default function ProfileScreen() {
   }, [])
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       refreshControl={
-        <RefreshControl 
-          refreshing={loading || loadingFriends} 
+        <RefreshControl
+          refreshing={loading || loadingFriends}
           onRefresh={refreshAll}
         />
       }
@@ -392,68 +249,68 @@ export default function ProfileScreen() {
             containerStyle={styles.avatar}
           />
           {editMode && (
-              <PaperButton onPress={pickImage} style={styles.changeAvatarButton}>
-                Changer la photo
-              </PaperButton>
-            )}
+            <PaperButton onPress={pickImage} style={styles.changeAvatarButton}>
+              Changer la photo
+            </PaperButton>
+          )}
         </View>
         {editMode ? (
-            <View style={styles.form}>
-              <TextInput
-                label="Nom complet"
-                value={formData.full_name}
-                onChangeText={text => setFormData(prev => ({ ...prev, full_name: text }))}
+          <View style={styles.form}>
+            <TextInput
+              label="Nom complet"
+              value={formData.full_name}
+              onChangeText={text => setFormData(prev => ({ ...prev, full_name: text }))}
+              mode="outlined"
+              style={styles.input}
+            />
+            <TextInput
+              label="Email"
+              value={formData.email}
+              onChangeText={text => setFormData(prev => ({ ...prev, email: text }))}
+              mode="outlined"
+              style={styles.input}
+              keyboardType="email-address"
+            />
+            <TextInput
+              label="Téléphone"
+              value={formData.phone}
+              onChangeText={text => setFormData(prev => ({ ...prev, phone: text }))}
+              mode="outlined"
+              style={styles.input}
+              keyboardType="phone-pad"
+            />
+            <View style={styles.buttonContainer}>
+              <PaperButton
+                mode="contained"
+                onPress={handleSave}
+                loading={loading}
+                style={styles.button}
+              >
+                Enregistrer
+              </PaperButton>
+              <PaperButton
                 mode="outlined"
-                style={styles.input}
-              />
-              <TextInput
-                label="Email"
-                value={formData.email}
-                onChangeText={text => setFormData(prev => ({ ...prev, email: text }))}
-                mode="outlined"
-                style={styles.input}
-                keyboardType="email-address"
-              />
-              <TextInput
-                label="Téléphone"
-                value={formData.phone}
-                onChangeText={text => setFormData(prev => ({ ...prev, phone: text }))}
-                mode="outlined"
-                style={styles.input}
-                keyboardType="phone-pad"
-              />
-              <View style={styles.buttonContainer}>
-                <PaperButton
-                  mode="contained"
-                  onPress={handleSave}
-                  loading={loading}
-                  style={styles.button}
-                >
-                  Enregistrer
-                </PaperButton>
-                <PaperButton
-                  mode="outlined"
-                  onPress={() => setEditMode(false)}
-                  style={styles.button}
-                >
-                  Annuler
-                </PaperButton>
-              </View>
+                onPress={() => setEditMode(false)}
+                style={styles.button}
+              >
+                Annuler
+              </PaperButton>
             </View>
-          ) : (
+          </View>
+        ) : (
           <View style={styles.userInfo}>
             <Text h4>{profile?.full_name || user?.email}</Text>
             <Text style={styles.email}>{user?.email}</Text>
             <PaperButton
-                mode="contained"
-                onPress={() => setEditMode(true)}
-                style={styles.editButton}
-              >
-                Modifier le profil
-          </PaperButton>
+              mode="contained"
+              onPress={() => setEditMode(true)}
+              style={styles.editButton}
+            >
+              Modifier le profil
+            </PaperButton>
           </View>
         )}
-         
+
       </Card>
 
 
@@ -523,7 +380,7 @@ export default function ProfileScreen() {
             onPress={() => setShowAddFriend(true)}
           />
         </View>
-        
+
         {friendRequests.length > 0 && (
           <View style={styles.requestsSection}>
             <Text style={styles.sectionTitle}>Demandes d'amis</Text>
@@ -830,4 +687,4 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   ...additionalStyles,
-}) 
+})

@@ -17,7 +17,7 @@ const DonateToInstituteModal = ({
   const { refreshData } = useSteps()
 
   const handleDonate = async () => {
-   
+
     if (isNaN(pointsValue) || pointsValue <= 0) {
       throw new Error('Montant invalide')
     }
@@ -26,7 +26,7 @@ const DonateToInstituteModal = ({
     }
 
     setLoading(true)
-    const userId = supabase.auth.user().id
+    const user = await userService.getUser();
     try {
       const pointsValue = parseInt(points)
       if (isNaN(pointsValue) || pointsValue <= 0) {
@@ -37,7 +37,7 @@ const DonateToInstituteModal = ({
       }
 
       setLoading(true)
-      const result = await donationService.makeDonation(institute.id, userId, pointsValue)
+      const result = await donationService.makeDonation(institute.id, user.id, pointsValue)
       if (result.goalReached) {
         // Handle goal reached logic
       }
@@ -58,18 +58,18 @@ const DonateToInstituteModal = ({
     <CustomOverlay visible={isVisible} onBackdropPress={onClose}>
       <View style={styles.container}>
         <Text h4 style={styles.title}>Faire un don à {institute?.name}</Text>
-        
+
         <View style={styles.progressContainer}>
           <View style={styles.progressInfo}>
             <Text>Objectif : {institute?.points_goal?.toLocaleString()} points</Text>
             <Text>Actuel : {institute?.total_donations?.toLocaleString()} points</Text>
           </View>
           <View style={styles.progressBarContainer}>
-            <View 
+            <View
               style={[
-                styles.progressBar, 
+                styles.progressBar,
                 { width: `${Math.min((institute?.total_donations / institute?.points_goal) * 100, 100)}%` }
-              ]} 
+              ]}
             />
           </View>
           <Text style={styles.remainingPoints}>
@@ -158,4 +158,4 @@ const styles = StyleSheet.create({
   button: {
     width: '45%',
   },
-}) 
+})

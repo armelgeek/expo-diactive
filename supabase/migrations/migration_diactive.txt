@@ -58,7 +58,7 @@ ADD COLUMN website_url VARCHAR(255),
 ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
-
+add description field in partner_type
 
 ALTER TABLE category
 ADD COLUMN description TEXT

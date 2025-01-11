@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { socialService } from '../services/api/socialService'
+import { user as userService } from '../services/api/user'
 
 export const useSocial = () => {
   const [loading, setLoading] = useState(false)
@@ -12,8 +13,8 @@ export const useSocial = () => {
   const fetchFriends = async () => {
     try {
       setLoading(true)
-      const userId = supabase.auth.user().id
-      const data = await socialService.fetchFriends(userId)
+      const user = await userService.getUser();
+      const data = await socialService.fetchFriends(user.id)
       setFriends(data)
     } catch (err) {
       setError(err.message)
@@ -26,8 +27,8 @@ export const useSocial = () => {
   const fetchPendingRequests = async () => {
     try {
       setLoading(true)
-      const userId = supabase.auth.user().id
-      const data = await socialService.fetchPendingRequests(userId)
+      const user = await userService.getUser();
+      const data = await socialService.fetchPendingRequests(user.id)
       setPendingRequests(data)
     } catch (err) {
       setError(err.message)
@@ -53,8 +54,8 @@ export const useSocial = () => {
   const sendFriendRequest = async (friendId) => {
     try {
       setLoading(true)
-      const userId = supabase.auth.user().id
-      await socialService.sendFriendRequest(userId, friendId)
+      const user = await userService.getUser();
+      await socialService.sendFriendRequest(user.id, friendId)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -80,8 +81,8 @@ export const useSocial = () => {
   const sharePoints = async (friendId, pointsAmount) => {
     try {
       setLoading(true)
-      const userId = supabase.auth.user().id
-      await socialService.sharePoints(userId, friendId, pointsAmount)
+      const user = await userService.getUser();
+      await socialService.sharePoints(user.id, friendId, pointsAmount)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -108,4 +109,4 @@ export const useSocial = () => {
     sharePoints,
     shareHistory: []
   }
-} 
+}

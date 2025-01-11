@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { profileService } from '../services/api/profileService'
+import { user as userService } from '../services/api/user'
 import { supabase } from '../services/supabase'
 
 export const useProfile = () => {
@@ -17,8 +18,8 @@ export const useProfile = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true)
-      const userId = supabase.auth.user().id
-      const data = await profileService.fetchProfile(userId)
+      const user = await userService.getUser();
+      const data = await profileService.fetchProfile(user.id)
       setProfile(data)
 
       // Charger les statistiques
@@ -27,15 +28,15 @@ export const useProfile = () => {
         rewardsData,
         ordersData
       ] = await Promise.all([
-        profileService.fetchActivities(userId),
+        profileService.fetchActivities(user.id),
         supabase
           .from('user_rewards')
           .select('id')
-          .eq('user_id', userId),
+          .eq('user_id', user.id),
         supabase
           .from('orders')
           .select('id')
-          .eq('user_id', userId)
+          .eq('user_id', user.id)
       ])
 
       const totalSteps = stepsData.reduce((sum, day) => sum + day.steps_count, 0)
@@ -59,8 +60,8 @@ export const useProfile = () => {
   const updateProfile = async (updates) => {
     try {
       setLoading(true)
-      const userId = supabase.auth.user().id
-      await profileService.updateProfile(updates, userId)
+      const user = await userService.getUser();
+      await profileService.updateProfile(updates, user.id)
       await fetchProfile()
     } catch (err) {
       setError(err.message)
@@ -74,8 +75,8 @@ export const useProfile = () => {
   const updateAvatar = async (uri) => {
     try {
       setLoading(true)
-      const userId = supabase.auth.user().id
-      await profileService.updateAvatar(uri, userId)
+      const user = await userService.getUser();
+      await profileService.updateAvatar(uri, user.id)
       await fetchProfile()
     } catch (err) {
       setError(err.message)
@@ -90,8 +91,8 @@ export const useProfile = () => {
   const fetchActivities = async () => {
     try {
       setLoading(true)
-      const userId = supabase.auth.user().id
-      const data = await profileService.fetchActivities(userId)
+      const user = await userService.getUser();
+      const data = await profileService.fetchActivities(user.id)
       setActivities(data)
     } catch (err) {
       setError(err.message)
@@ -116,4 +117,4 @@ export const useProfile = () => {
     refreshProfile: fetchProfile,
     refreshActivities: fetchActivities,
   }
-} 
+}

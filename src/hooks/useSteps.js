@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { stepsService } from '../services/api/stepsService'
+import { user as userService } from '../services/api/user'
 import { supabase } from '../services/supabase'
 
 export const useSteps = () => {
@@ -12,15 +13,15 @@ export const useSteps = () => {
 
   const fetchUserPoints = async () => {
     try {
-      const userId = supabase.auth.user().id
-      const availablePoints = await stepsService.fetchUserPoints(userId)
+      const user = await userService.getUser();
+      const availablePoints = await stepsService.fetchUserPoints(user.id)
       setPoints(availablePoints)
 
       // Récupérer les points cumulés
       const { data: cumulativeData, error: cumulativeError } = await supabase
         .from('daily_steps')
         .select('points_earned')
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
 
       if (cumulativeError) throw cumulativeError
       const totalPoints = cumulativeData?.reduce((sum, item) => sum + (item.points_earned || 0), 0) || 0
@@ -32,8 +33,8 @@ export const useSteps = () => {
 
   const fetchTodaySteps = async () => {
     try {
-      const userId = supabase.auth.user().id
-      const todaySteps = await stepsService.fetchTodaySteps(userId)
+      const user = await userService.getUser();
+      const todaySteps = await stepsService.fetchTodaySteps(user.id)
       setSteps(todaySteps)
     } catch (err) {
       console.error('Erreur lors de la récupération des pas:', err)
@@ -42,8 +43,8 @@ export const useSteps = () => {
 
   const fetchWeeklyStats = async () => {
     try {
-      const userId = supabase.auth.user().id
-      const stats = await stepsService.fetchWeeklyStats(userId)
+      const user = await userService.getUser();
+      const stats = await stepsService.fetchWeeklyStats(user.id)
       setWeeklyStats(stats)
     } catch (err) {
       console.error('Erreur lors de la récupération des statistiques:', err)
@@ -53,8 +54,8 @@ export const useSteps = () => {
   const updateSteps = async (newSteps) => {
     try {
       setLoading(true)
-      const userId = supabase.auth.user().id
-      await stepsService.updateSteps(userId, newSteps)
+      const user = await userService.getUser();
+      await stepsService.updateSteps(user.id, newSteps)
 
       // Rafraîchir toutes les données
       await Promise.all([
@@ -121,4 +122,4 @@ export const useSteps = () => {
     updateSteps,
     refreshData,
   }
-} 
+}

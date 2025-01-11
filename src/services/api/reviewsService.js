@@ -45,7 +45,7 @@ export const reviewsService = {
 
   async addReview(partnerId, rating, comment) {
     try {
-      const userId = supabase.auth.user().id
+      const user = await userService.getUser();
 
       const { error } = await supabase
         .from('partner')
@@ -54,7 +54,7 @@ export const reviewsService = {
           type: comment
         })
         .eq('id', partnerId)
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
 
       if (error) throw error
     } catch (error) {
