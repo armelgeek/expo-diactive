@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native'
 import { Text, Card, Button, Divider, List } from 'react-native-paper'
-import { supabase } from '../../services/supabase'
+import { partnerService } from '../../services/partnerService'
 
 export const MarketplaceScreen = ({ navigation }) => {
   const [partners, setPartners] = useState({})
@@ -15,37 +15,11 @@ export const MarketplaceScreen = ({ navigation }) => {
       setError(null)
 
       // Récupérer les catégories
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('partner_categories')
-        .select('*')
-        .order('name')
-
-      if (categoriesError) throw categoriesError
+      const categoriesData = await partnerService.getPartnerCategories()
       setCategories(categoriesData)
 
-      // Récupérer les partenaires avec leurs catégories
-      const { data: partnersData, error: partnersError } = await supabase
-        .from('partners')
-        .select(`
-          id,
-          company_name,
-          description,
-          logo_url,
-          category_id
-        `)
-        .order('company_name')
-      if (partnersError) throw partnersError
-
-      // Grouper les partenaires par catégorie
-      const groupedPartners = partnersData.reduce((acc, partner) => {
-        const categoryId = partner.category_id
-        if (!acc[categoryId]) {
-          acc[categoryId] = []
-        }
-        acc[categoryId].push(partner)
-        return acc
-      }, {})
-
+      // Récupérer les partenaires groupés par catégorie
+      const groupedPartners = await partnerService.getPartnersGroupedByCategories()
       setPartners(groupedPartners)
     } catch (err) {
       console.error('Error fetching partners:', err)
@@ -54,6 +28,7 @@ export const MarketplaceScreen = ({ navigation }) => {
       setLoading(false)
     }
   }
+
   useEffect(() => {
     fetchPartners()
   }, [])
@@ -81,13 +56,13 @@ export const MarketplaceScreen = ({ navigation }) => {
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.partnersRow}>
               {partners[category.id]?.map(partner => (
-                <Card 
-                  key={partner.id} 
+                <Card
+                  key={partner.id}
                   style={styles.partnerCard}
                   onPress={() => handlePartnerPress(partner)}
                 >
-                  <Card.Cover 
-                    source={{ uri: partner.logo_url }} 
+                  <Card.Cover
+                    source={{ uri: partner.logo_url }}
                     style={styles.partnerLogo}
                   />
                   <Card.Content>
@@ -142,4 +117,4 @@ const styles = StyleSheet.create({
   divider: {
     marginTop: 16,
   },
-}) 
+})

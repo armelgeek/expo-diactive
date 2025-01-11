@@ -6,27 +6,28 @@ export const profileService = {
 		const { data: { user } } = await supabase.auth.getUser()
 		if (!user) return { user: null, profile: null }
 
-		const { data: profile, error } = await supabase
-			.from('profiles')
+		const { data: profileData, error } = await supabase
+			.from('profile')
 			.select('*')
-			.eq('id', user.id)
+			.eq('user_id', user.id)
 			.single()
 
 		if (error) throw error
+		const profile = profileData ? profileData : null
 		return { user, profile }
 	},
 
 	// Update profile information
-	updateProfile: async (profileId, profileData) => {
+	updateProfile: async (userId, profileData) => {
 		const { error } = await supabase
-			.from('profiles')
+			.from('profile')
 			.update({
 				full_name: profileData.full_name,
 				phone: profileData.phone,
 				avatar_url: profileData.avatar_url,
 				updated_at: new Date()
 			})
-			.eq('id', profileId)
+			.eq('user_id', userId)
 
 		if (error) throw error
 	},
@@ -51,9 +52,9 @@ export const profileService = {
 		if (!user) return false
 
 		const { data, error } = await supabase
-			.from('profiles')
+			.from('profile')
 			.select('is_admin')
-			.eq('id', user.id)
+			.eq('user_id', user.id)
 			.single()
 
 		if (error) throw error
@@ -63,9 +64,9 @@ export const profileService = {
 	// Get profile data
 	getProfile: async (userId) => {
 		const { data, error } = await supabase
-			.from('profiles')
+			.from('profile')
 			.select('*')
-			.eq('id', userId)
+			.eq('user_id', userId)
 			.single()
 
 		if (error) throw error

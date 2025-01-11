@@ -16,18 +16,10 @@ export const useSteps = () => {
       const user = await userService.getUser();
       const availablePoints = await stepsService.fetchUserPoints(user.id)
       setPoints(availablePoints)
-
-      // Récupérer les points cumulés
-      const { data: cumulativeData, error: cumulativeError } = await supabase
-        .from('daily_steps')
-        .select('points_earned')
-        .eq('user_id', user.id)
-
-      if (cumulativeError) throw cumulativeError
-      const totalPoints = cumulativeData?.reduce((sum, item) => sum + (item.points_earned || 0), 0) || 0
-      setCumulativePoints(totalPoints)
+      const cumulativePoints = await stepsService.fetchCumulativePoints(user.id)
+      setCumulativePoints(cumulativePoints)
     } catch (err) {
-      console.error('Erreur lors de la récupération des points:', err)
+      console.error('Erreur lors de la récupération  des points:', err)
     }
   }
 

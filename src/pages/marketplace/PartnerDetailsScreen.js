@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native'
 import { Text, Card, Button, Avatar, Divider } from 'react-native-paper'
 import { supabase } from '../../services/supabase'
 import { ProductCard } from '../../molecules/ProductCard'
+import { partnerService } from '../../services/partnerService'
 
 export const PartnerDetailsScreen = ({ route, navigation }) => {
   const { partner } = route.params
@@ -15,13 +16,7 @@ export const PartnerDetailsScreen = ({ route, navigation }) => {
       setLoading(true)
       setError(null)
 
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('partner_id', partner.id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
+      const data = await partnerService.getPartnerProducts(partner.id)
       setProducts(data)
     } catch (err) {
       console.error('Error fetching products:', err)
@@ -134,4 +129,4 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 32,
   },
-}) 
+})

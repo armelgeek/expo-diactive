@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native'
 import { Text, Card, Divider, Button } from 'react-native-paper'
-import { supabase } from '../../services/supabase'
+import { partnerService } from '../../services/partnerService'
 
 export const PartnerOrdersScreen = ({ route, navigation }) => {
   const { partnerId } = route.params
@@ -14,36 +14,7 @@ export const PartnerOrdersScreen = ({ route, navigation }) => {
       setLoading(true)
       setError(null)
 
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          created_at,
-          status,
-          total_points,
-          partner:partners!orders_partner_id_fkey (
-            company_name
-          ),
-          order_items (
-            id,
-            quantity,
-            points_cost,
-            reward:rewards (
-              title,
-              description,
-              image_url
-            ),
-            product:products (
-              title,
-              description,
-              image_url
-            )
-          )
-        `)
-        .eq('partner_id', partnerId)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
+      const data = await partnerService.getPartnerOrders(partnerId)
       setOrders(data || [])
     } catch (err) {
       console.error('Error fetching orders:', err)
@@ -60,13 +31,8 @@ export const PartnerOrdersScreen = ({ route, navigation }) => {
   const handleValidateOrder = async (orderId) => {
     try {
       setLoading(true)
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: 'validated' })
-        .eq('id', orderId)
+      await partnerService.validatePartnerOrder(orderId)
 
-      if (error) throw error
-      
       // Rafraîchir la liste des commandes
       await fetchOrders()
     } catch (err) {
@@ -94,9 +60,9 @@ export const PartnerOrdersScreen = ({ route, navigation }) => {
 
       {orders.map(order => (
         <Card key={order.id} style={styles.card}>
-          <Card.Title 
-            title={`Commande #${order.id}`} 
-            subtitle={`Total: ${order.total_points} points • ${order.status}`} 
+          <Card.Title
+            title={`Commande #${order.id}`}
+            subtitle={`Total: ${order.total_points} points • ${order.status}`}
           />
           <Card.Content>
             {order.order_items.map(item => (
@@ -114,11 +80,11 @@ export const PartnerOrdersScreen = ({ route, navigation }) => {
                 ) : null}
               </View>
             ))}
-            
+
             <View style={styles.actions}>
               {order.status === 'pending' && (
-                <Button 
-                  mode="contained" 
+                <Button
+                  mode="contained"
                   onPress={() => handleValidateOrder(order.id)}
                   style={styles.button}
                 >
@@ -126,8 +92,8 @@ export const PartnerOrdersScreen = ({ route, navigation }) => {
                 </Button>
               )}
               {order.status === 'validated' && (
-                <Button 
-                  mode="contained" 
+                <Button
+                  mode="contained"
                   onPress={() => handleScanQR(order.id)}
                   style={styles.button}
                 >
@@ -182,4 +148,4 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 8,
   },
-}) 
+})

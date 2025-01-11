@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native'
 import { Text, Card, Button, Divider } from 'react-native-paper'
 import { supabase } from '../../services/supabase'
+import { orderService } from '../../services/orderService'
 
 export const OrdersScreen = ({ navigation }) => {
   const [orders, setOrders] = useState([])
@@ -16,38 +17,8 @@ export const OrdersScreen = ({ navigation }) => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Non authentifié')
 
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          created_at,
-          status,
-          total_points,
-          partner:partners (
-            company_name,
-            logo_url
-          ),
-          order_items (
-            id,
-            quantity,
-            points_cost,
-            reward:rewards (
-              title,
-              description,
-              image_url
-            ),
-            product:products (
-              title,
-              description,
-              image_url
-            )
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setOrders(data || [])
+      const data = await orderService.fetchOrders(user.id)
+      setOrders(data)
     } catch (err) {
       console.error('Error fetching orders:', err)
       setError(err.message)
@@ -61,11 +32,11 @@ export const OrdersScreen = ({ navigation }) => {
   }, [])
 
   const handleShowQRCode = (order) => {
-    navigation.navigate('QRCode', { 
+    navigation.navigate('QRCode', {
       orderId: order.id,
       orderData: {
-        partnerId: order.partner.id,
-        items: order.order_items,
+        partnerId: order.partner_id,
+        items: order.command_items,
         total: order.total_points
       }
     })
@@ -97,9 +68,9 @@ export const OrdersScreen = ({ navigation }) => {
 
       {orders.map(order => (
         <Card key={order.id} style={styles.card}>
-          <Card.Title 
+          <Card.Title
             title={`Commande #${order.id}`}
-            subtitle={`Chez ${order.partner.company_name}`}
+            subtitle={`Chez ${order.partner.nom}`}
           />
           <Card.Content>
             <View style={styles.statusContainer}>
@@ -113,17 +84,17 @@ export const OrdersScreen = ({ navigation }) => {
 
             <Divider style={styles.divider} />
 
-            {order.order_items.map(item => (
+            {order.command_items?.map(item => (
               <View key={item.id} style={styles.item}>
                 {item.reward ? (
                   <>
-                    <Text variant="titleMedium">{item.reward.title}</Text>
-                    <Text variant="bodySmall">{item.quantity} x {item.points_cost} points</Text>
+                    <Text variant="titleMedium">{item.reward.label}</Text>
+                    <Text variant="bodySmall">{item.quantite} x {item.point_cost} points</Text>
                   </>
                 ) : item.product ? (
                   <>
-                    <Text variant="titleMedium">{item.product.title}</Text>
-                    <Text variant="bodySmall">{item.quantity} x {item.points_cost} points</Text>
+                    <Text variant="titleMedium">{item.product.label}</Text>
+                    <Text variant="bodySmall">{item.quantite} x {item.point_cost} points</Text>
                   </>
                 ) : null}
               </View>

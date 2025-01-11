@@ -81,7 +81,7 @@ export const usePoints = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'daily_steps'
+          table: 'daily_points'
         },
         () => {
           fetchPoints()
@@ -115,4 +115,4 @@ export const usePoints = () => {
       ])
     }, [fetchPoints, fetchWeeklyStats])
   }
-} 
+}

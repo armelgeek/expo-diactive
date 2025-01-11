@@ -62,7 +62,7 @@ export default function ProfileScreen() {
     }
   }
 
-  const fetchRewards = async () => {
+  /**const fetchRewards = async () => {
     try {
       if (!user) return
       const rewardsData = await rewardsService.getUserRewards(user.id)
@@ -70,7 +70,7 @@ export default function ProfileScreen() {
     } catch (err) {
       console.error('Erreur lors de la récupération des récompenses:', err)
     }
-  }
+  }**/
 
   const fetchDonations = async () => {
     try {
@@ -197,7 +197,7 @@ export default function ProfileScreen() {
   const refreshAll = async () => {
     await Promise.all([
       fetchProfile(),
-      fetchRewards(),
+      //fetchRewards(),
       fetchDonations(),
       fetchFriends(),
       refreshData(),
@@ -343,7 +343,7 @@ export default function ProfileScreen() {
         ))}
       </Card>
 
-      <Card containerStyle={styles.rewardsCard}>
+     {/**<Card containerStyle={styles.rewardsCard}>
         <Card.Title>Récompenses Obtenues</Card.Title>
         {rewards.map((reward, index) => (
           <ListItem key={index} bottomDivider>
@@ -355,7 +355,7 @@ export default function ProfileScreen() {
             <Text style={styles.pointsCost}>-{reward.points_cost} pts</Text>
           </ListItem>
         ))}
-      </Card>
+      </Card> */ }
 
       <Card containerStyle={styles.donationsCard}>
         <Card.Title>Dons Effectués</Card.Title>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native'
 import { Text, Card, Button, List, Divider, Chip, Portal, Dialog, TextInput } from 'react-native-paper'
 import { supabase } from '../../services/supabase'
+import { friendsService } from '../../services/friendsService'
 
 export default function FriendsActivityScreen() {
   const [loading, setLoading] = useState(false)
@@ -19,53 +20,7 @@ export default function FriendsActivityScreen() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Récupérer toutes les relations d'amitié
-      const { data: sentRequests, error: sentError } = await supabase
-        .from('friendships')
-        .select(`
-          id,
-          status,
-          friend:profiles!friendships_friend_id_fkey (
-            id,
-            full_name,
-            email
-          )
-        `)
-        .eq('user_id', user.id)
-
-      if (sentError) throw sentError
-
-      const { data: receivedRequests, error: receivedError } = await supabase
-        .from('friendships')
-        .select(`
-          id,
-          status,
-          user:profiles!friendships_user_id_fkey (
-            id,
-            full_name,
-            email
-          )
-        `)
-        .eq('friend_id', user.id)
-
-      if (receivedError) throw receivedError
-
-      // Combiner les demandes envoyées et reçues
-      const allFriendships = [
-        ...sentRequests.map(req => ({
-          id: req.id,
-          status: req.status,
-          friend: req.friend,
-          type: 'sent'
-        })),
-        ...receivedRequests.map(req => ({
-          id: req.id,
-          status: req.status,
-          friend: req.user,
-          type: 'received'
-        }))
-      ]
-
+      const allFriendships = await friendsService.getAllFriendships(user.id)
       setFriendships(allFriendships)
     } catch (err) {
       console.error('Error fetching friendships:', err)
@@ -77,25 +32,7 @@ export default function FriendsActivityScreen() {
   const handleFriendRequest = async (friendshipId, accept) => {
     try {
       setLoading(true)
-      if (accept) {
-        // Accepter la demande
-        const { error } = await supabase
-          .from('friendships')
-          .update({ status: 'accepted' })
-          .eq('id', friendshipId)
-
-        if (error) throw error
-      } else {
-        // Refuser la demande
-        const { error } = await supabase
-          .from('friendships')
-          .delete()
-          .eq('id', friendshipId)
-
-        if (error) throw error
-      }
-
-      // Rafraîchir les listes
+      await friendsService.handleFriendRequest(friendshipId, accept)
       await fetchFriendships()
     } catch (err) {
       console.error('Error handling friend request:', err)
@@ -104,46 +41,13 @@ export default function FriendsActivityScreen() {
     }
   }
 
- 
   const fetchPointShares = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Récupérer le profil de l'utilisateur
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single()
-
-      if (profileError) throw profileError
-
-      // Récupérer les partages de points reçus
-      const { data: receivedShares, error: sharesError } = await supabase
-        .from('point_shares')
-        .select(`
-          id,
-          points,
-          status,
-          created_at,
-          sender:profiles!point_shares_sender_id_fkey (
-            id,
-            full_name,
-            email
-          ),
-          receiver:profiles!point_shares_receiver_id_fkey (
-            id,
-            full_name,
-            email
-          )
-        `)
-        .eq('receiver_id', profile.id)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
-
-      if (sharesError) throw sharesError
-      setPointShares(receivedShares || [])
+      const shares = await friendsService.getPointShares(user.id)
+      setPointShares(shares || [])
     } catch (err) {
       console.error('Error fetching point shares:', err)
     }
@@ -152,28 +56,37 @@ export default function FriendsActivityScreen() {
   const handlePointShareResponse = async (shareId, accept) => {
     try {
       setLoading(true)
-      if (accept) {
-        // Accepter le partage
-        const { error } = await supabase
-          .from('point_shares')
-          .update({ status: 'accepted' })
-          .eq('id', shareId)
-
-        if (error) throw error
-      } else {
-        // Refuser le partage
-        const { error } = await supabase
-          .from('point_shares')
-          .update({ status: 'rejected' })
-          .eq('id', shareId)
-
-        if (error) throw error
-      }
-
-      // Rafraîchir les listes
+      await friendsService.handlePointShareResponse(shareId, accept)
       await fetchPointShares()
     } catch (err) {
       console.error('Error handling point share:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSharePoints = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const points = parseInt(pointsToShare)
+
+      if (isNaN(points) || points <= 0) {
+        throw new Error('Le nombre de points doit être positif')
+      }
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Non authentifié')
+
+      await friendsService.sharePoints(user.id, selectedFriend.id, points)
+
+      setShowShareDialog(false)
+      setPointsToShare('')
+      setSelectedFriend(null)
+      await fetchPointShares()
+    } catch (err) {
+      console.error('Error sharing points:', err)
+      setError(err.message)
     } finally {
       setLoading(false)
     }
@@ -186,7 +99,7 @@ export default function FriendsActivityScreen() {
 
   const renderActivity = (activity) => {
     const { type, user, details, date, receiver } = activity
-    
+
     switch (type) {
       case 'steps':
         return (
@@ -225,62 +138,6 @@ export default function FriendsActivityScreen() {
         return 'orange'
       default:
         return 'gray'
-    }
-  }
-
-  const handleSharePoints = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const points = parseInt(pointsToShare)
-      
-      if (isNaN(points) || points <= 0) {
-        throw new Error('Le nombre de points doit être positif')
-      }
-
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non authentifié')
-
-      // Récupérer le profil de l'utilisateur
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', user.email)
-        .single()
-
-      if (profileError) throw profileError
-
-      // Vérifier les points disponibles
-      const { data: userPoints, error: pointsError } = await supabase
-        .rpc('get_available_points', { p_user_id: user.id })
-
-      if (pointsError) throw pointsError
-
-      if (userPoints < points) {
-        throw new Error('Vous n\'avez pas assez de points disponibles')
-      }
-
-      // Créer le partage de points
-      const { error: shareError } = await supabase
-        .from('point_shares')
-        .insert({
-          sender_id: profile.id,
-          receiver_id: selectedFriend.id,
-          points: points,
-          status: 'pending'
-        })
-
-      if (shareError) throw shareError
-
-      setShowShareDialog(false)
-      setPointsToShare('')
-      setSelectedFriend(null)
-      await fetchPointShares()
-    } catch (err) {
-      console.error('Error sharing points:', err)
-      setError(err.message)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -374,12 +231,12 @@ export default function FriendsActivityScreen() {
     <View style={styles.container}>
       <ScrollView
         refreshControl={
-          <RefreshControl 
-            refreshing={loading} 
+          <RefreshControl
+            refreshing={loading}
             onRefresh={() => {
               fetchFriendships()
               fetchPointShares()
-            }} 
+            }}
           />
         }
       >
@@ -520,4 +377,4 @@ const styles = StyleSheet.create({
     color: '#ff190c',
     marginTop: 8,
   },
-}) 
+})

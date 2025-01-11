@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { TextInput, Button, Card, Text } from 'react-native-paper'
 import * as ImagePicker from 'expo-image-picker'
-import { supabase } from '../../../services/supabase'
+import { partnerService } from '../../../services/partnerService'
 
 export const CreatePartnerForm = ({ onSubmit }) => {
   const [loading, setLoading] = useState(false)
@@ -34,23 +34,7 @@ export const CreatePartnerForm = ({ onSubmit }) => {
           type: 'image/jpeg'
         }
 
-        // Convertir l'URI en Blob
-        const response = await fetch(file.uri)
-        const blob = await response.blob()
-
-        // Uploader l'image
-        const fileName = `partner-logos/${Date.now()}-${file.name}`
-        const { data, error } = await supabase.storage
-          .from('public')
-          .upload(fileName, blob)
-
-        if (error) throw error
-
-        // Obtenir l'URL publique
-        const { data: { publicUrl } } = supabase.storage
-          .from('public')
-          .getPublicUrl(fileName)
-
+        const publicUrl = await partnerService.uploadPartnerLogo(file)
         handleChange('logoUrl', publicUrl)
       } catch (error) {
         console.error('Error uploading image:', error)
@@ -152,4 +136,4 @@ const styles = StyleSheet.create({
   submitButton: {
     marginTop: 8
   }
-}) 
+})

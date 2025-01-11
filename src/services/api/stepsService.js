@@ -16,6 +16,22 @@ export const stepsService = {
       throw err
     }
   },
+  async fetchCumulativePoints(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('daily_points')
+        .select('points')
+        .eq('user_id', userId)
+        .order('date', { ascending: true })
+
+      if (error) throw error;
+      const totalPoints = data.reduce((sum, item) => sum + (item.points || 0), 0);
+      return totalPoints;
+    } catch (err) {
+      console.error('Error fetching points cumulate:', err);
+      throw err;
+    }
+  },
 
   async fetchTodaySteps(userId) {
     try {
@@ -30,7 +46,7 @@ export const stepsService = {
       if (error && error.code !== 'PGRST116') throw error // PGRST116 = not found
       return data?.steps_count || 0
     } catch (err) {
-      console.error('Error fetching steps:', err)
+      console.error('Error fetching steps today:', err)
       throw err
     }
   },
