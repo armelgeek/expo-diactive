@@ -716,3 +716,73 @@ add status field in contacts table
 add status field in transfert table
 add message field in transfert table
 add points_cost field article table
+
+
+
+
+
+declare
+  total_orders integer;
+  total_items integer;
+  total_points integer;
+  best_rewards json;
+begin
+  -- Get total orders count
+  select count(distinct roi.commande_id)
+  into total_orders
+  from public.command_items roi
+  join public.reward r on r.id = roi.reward_id
+  where r.partner_id = p_partner_id
+  and exists (
+    select 1
+    from public.commande ro
+    where ro.id = roi.order_id
+    and ro.status = 'completed'
+  );
+
+  -- Get total items sold
+  select coalesce(sum(roi.quantity), 0)
+  into total_items
+  from public.command_items roi
+  join public.reward r on r.id = roi.reward_id
+  join public.commande ro on ro.id = roi.commande_id
+  where r.partner_id = p_partner_id
+  and ro.status = 'completed';
+
+  -- Get total points earned
+  select coalesce(sum(roi.point * roi.quantity), 0)
+  into total_points
+  from public.command_items roi
+  join public.reward r on r.id = roi.reward_id
+  join public.commande ro on ro.id = roi.commande_id
+  where r.partner_id = p_partner_id
+  and ro.status = 'completed';
+
+  -- Get top 5 best-selling rewards
+  select json_agg(reward)
+  into best_rewards
+  from (
+    select
+      r.id,
+      r.title,
+      r.image_url,
+      sum(roi.quantity) as total_sold,
+      sum(roi.point * roi.quantity) as total_points
+    from public.reward r
+    left join public.command_items roi on roi.reward_id = r.id
+    left join public.commande ro on ro.id = roi.commande_id
+    where r.partner_id = p_partner_id
+    and (ro.status = 'completed' or ro.status is null)
+    group by r.id, r.title, r.image_url
+    order by total_sold desc nulls last
+    limit 5
+  ) reward;
+
+  -- Return statistics as JSON
+  return json_build_object(
+    'total_orders', total_orders,
+    'total_items', total_items,
+    'total_points', total_points,
+    'best_rewards', coalesce(best_rewards, '[]'::json)
+  );
+end;

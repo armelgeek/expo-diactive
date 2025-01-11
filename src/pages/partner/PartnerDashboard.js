@@ -38,7 +38,19 @@ export const PartnerDashboard = ({ navigation }) => {
       // Récupérer le top des récompenses
       const { data: rewardsData, error: rewardsError } = await supabase
         .rpc('get_top_rewards', { p_partner_id: profile.id, p_limit: 5 })
-
+        if(rewardsData){
+          rewardsData.map(item => {
+            item.title = item.label,
+            item.image_url = item.image,
+            item.points_cost = item.point,
+            item.stock = item.quantity,
+            item.point = undefined,
+            item.quantity = undefined,
+            item.label = undefined,
+            item.image = undefined
+            return item
+          })
+        }
       if (rewardsError) throw rewardsError
 
       setTopRewards(rewardsData || [])
@@ -76,10 +88,10 @@ export const PartnerDashboard = ({ navigation }) => {
             <Text variant="titleLarge">{profile.companyName}</Text>
             {profile.category && (
               <View style={styles.categoryContainer}>
-                <MaterialCommunityIcons 
-                  name={profile.category.icon_name} 
-                  size={16} 
-                  color={theme.colors.primary} 
+                <MaterialCommunityIcons
+                  name={profile.category.icon_name}
+                  size={16}
+                  color={theme.colors.primary}
                 />
                 <Text variant="bodyMedium" style={styles.categoryText}>
                   {profile.category.name}
@@ -255,4 +267,4 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     color: '#666',
   },
-}) 
+})

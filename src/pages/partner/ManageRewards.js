@@ -25,11 +25,23 @@ export const ManageRewards = ({ navigation }) => {
       if (!profile?.id) return;
 
       const { data, error } = await supabase
-        .from('rewards')
+        .from('reward')
         .select('*')
         .eq('partner_id', profile.id)
-        .order('created_at', { ascending: false });
-
+        //.order('created_at', { ascending: false });
+        if(data){
+          data.map(item => {
+            item.title = item.label,
+            item.image_url = item.image,
+            item.points_cost = item.point,
+            item.stock = item.quantity,
+            item.point = undefined,
+            item.quantity = undefined,
+            item.label = undefined,
+            item.image = undefined
+            return item
+          })
+        }
       if (error) throw error;
       setRewards(data || []);
     } catch (err) {
@@ -96,13 +108,13 @@ export const ManageRewards = ({ navigation }) => {
       }
 
       const { data, error } = await supabase
-        .from('rewards')
+        .from('reward')
         .insert({
           partner_id: profile.id,
-          title: formData.title.trim(),
+          label: formData.title.trim(),
           description: formData.description.trim(),
-          image_url: formData.imageUrl,
-          points_cost: parseInt(formData.pointsCost),
+          image: formData.imageUrl,
+          point: parseInt(formData.pointsCost),
           stock: parseInt(formData.stock)
         })
         .select()
@@ -129,20 +141,6 @@ export const ManageRewards = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Button
-          title="Voir les commandes"
-          onPress={() => navigation.navigate('ManageOrders')}
-          icon={
-            <Icon
-              name="list"
-              type="font-awesome"
-              color="white"
-              size={16}
-              style={{ marginRight: 10 }}
-            />
-          }
-          containerStyle={styles.ordersButton}
-        />
         <Button
           title="Ajouter une récompense"
           onPress={() => setShowAddForm(true)}

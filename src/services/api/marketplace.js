@@ -1,4 +1,6 @@
 import { supabase } from '../supabase'
+const ac = new AbortController()
+ac.abort()
 
 export const marketplaceService = {
   async fetchCategories() {
@@ -8,6 +10,7 @@ export const marketplaceService = {
         .select('*')
         .eq('archive', false)
         .order('label')
+        .abortSignal(ac.signal)
 
       if (error) throw error
       return data.map(cat => ({

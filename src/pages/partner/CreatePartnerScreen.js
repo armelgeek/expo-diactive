@@ -31,10 +31,14 @@ export const CreatePartnerScreen = ({ navigation }) => {
   const fetchCategories = async () => {
     try {
       const { data, error } = await supabase
-        .from('partner_categories')
+        .from('partner_type')
         .select('*')
-        .order('name')
+        .order('label', { ascending: true })
 
+      data.map(item => {
+        item.name = item.label
+        return item
+      })
       if (error) throw error
       setCategories(data || [])
     } catch (err) {
@@ -248,4 +252,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
-}) 
+})

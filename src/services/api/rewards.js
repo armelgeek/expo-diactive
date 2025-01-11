@@ -72,7 +72,7 @@ export const rewardsApi = {
           created_at,
           type,
           total_points,
-          command_items!inner (
+          command_items (
             id,
             quantite,
             point_cost,
@@ -88,7 +88,6 @@ export const rewardsApi = {
         `)
         .eq('user_id', userId)
         .eq('type', 'completed')
-        //.eq('archive', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -99,7 +98,7 @@ export const rewardsApi = {
         items: order.command_items.map(item => ({
           id: item.id,
           quantity: item.quantite,
-          points_cost: item.point,
+          points_cost: item.point_cost,
           reward: item.reward ? {
             id: item.reward.id,
             title: item.reward.label,

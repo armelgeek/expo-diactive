@@ -14,6 +14,20 @@ export const partnerService = {
 			.eq('archive', false)
 			.order('nom')
 
+		if (data) {
+			data.map(item => {
+				item.company_name = item.nom,
+				item.logo_url = item.logo,
+				item.category_id = item.type_id,
+				item.nom = undefined,
+				item.logo = undefined,
+				item.type_id = undefined,
+				item.type = undefined
+
+				return item
+			})
+		}
+
 		if (error) throw error
 		return data
 	},
@@ -25,6 +39,12 @@ export const partnerService = {
 			.select('*')
 			.order('label')
 
+		if (data) {
+			data.map(item => {
+				item.name = item.label
+				return item
+			})
+		}
 		if (error) throw error
 		return data
 	},
@@ -298,7 +318,7 @@ export const partnerService = {
 						nom,
 						description
 					),
-					commande_items (
+					command_items (
 						id,
 						quantity,
 						points_cost,
