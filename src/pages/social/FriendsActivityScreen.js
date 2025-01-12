@@ -104,7 +104,7 @@ export default function FriendsActivityScreen() {
       case 'steps':
         return (
           <List.Item
-            title={user.full_name}
+            title={user.user_name}
             description={`A marché ${details.steps} pas (+${details.points} points)`}
             left={props => <List.Icon {...props} icon="walk" />}
           />
@@ -112,7 +112,7 @@ export default function FriendsActivityScreen() {
       case 'order':
         return (
           <List.Item
-            title={user.full_name}
+            title={user.user_name}
             description={`A utilisé ${details.points} points pour une commande`}
             left={props => <List.Icon {...props} icon="shopping" />}
           />
@@ -120,8 +120,8 @@ export default function FriendsActivityScreen() {
       case 'point_share':
         return (
           <List.Item
-            title={user.full_name}
-            description={`A partagé ${details.points} points avec ${receiver.full_name}`}
+            title={user.user_name}
+            description={`A partagé ${details.points} points avec ${receiver.user_name}`}
             left={props => <List.Icon {...props} icon="gift" />}
           />
         )
@@ -150,7 +150,7 @@ export default function FriendsActivityScreen() {
     return (
       <List.Item
         key={id}
-        title={friend.full_name || friend.email}
+        title={friend.user_name || friend.email}
         description={friend.email}
         left={props => <List.Icon {...props} icon="account" />}
         right={props => (
@@ -202,7 +202,7 @@ export default function FriendsActivityScreen() {
     return (
       <List.Item
         key={share.id}
-        title={share.sender.full_name || share.sender.email}
+        title={share.sender.user_name || share.sender.email}
         description={`Souhaite vous donner ${share.points} points`}
         left={props => <List.Icon {...props} icon="gift" />}
         right={props => (
@@ -288,7 +288,7 @@ export default function FriendsActivityScreen() {
         >
           <Dialog.Title>Partager des points</Dialog.Title>
           <Dialog.Content>
-            <Text>Partager des points avec {selectedFriend?.full_name || selectedFriend?.email}</Text>
+            <Text>Partager des points avec {selectedFriend?.user_name || selectedFriend?.email}</Text>
             <TextInput
               label="Nombre de points"
               value={pointsToShare}

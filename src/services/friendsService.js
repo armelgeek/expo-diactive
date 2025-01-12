@@ -215,6 +215,7 @@ export const friendsService = {
 			.select('user_id, user_name, first_name, last_name, avatar_url')
 			.in('user_id', friendIds)
 
+		console.log('profiles',friendIds);
 		if (profilesError) throw profilesError
 
 		// Combine the data

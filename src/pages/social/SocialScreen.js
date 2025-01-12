@@ -48,7 +48,7 @@ export default function SocialScreen({navigation}) {
         .select('id,user_id, user_name, phone')
         .in('phone', filteredContacts.map(c => c.phoneNumber))
 
-        const currentUserIds = users ? users.map(user => user.id) : [];
+        const currentUserIds = users ? users.map(user => user.user_id) : [];
 
       const { data: existingContacts, error: existingContactsError } = await supabase
         .from('contacts')
@@ -59,12 +59,11 @@ export default function SocialScreen({navigation}) {
       if (usersError || existingContactsError) throw usersError || existingContactsError
 
       const appUsers = users
-      .filter(user => !existingContacts.some(ec => ec.contact_id === user.id))
+      .filter(user => !existingContacts.some(ec => ec.contact_id === user.user_id))
       .map(user => ({
         ...user,
         full_name: user.user_name
       }));
-      console.log('appUsers', appUsers);
 
       setContacts(filteredContacts)
       setAppUsers(appUsers || [])
@@ -166,7 +165,7 @@ export default function SocialScreen({navigation}) {
                   right={props => (
                     <Button
                       mode="contained"
-                      onPress={() => addFriend(appUser.id)}
+                      onPress={() => addFriend(appUser.user_id)}
                       compact
                     >
                       Ajouter
