@@ -7,9 +7,9 @@ export const stepsService = {
         .from('profile')
         .select('points')
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()
+      if (error || !data) return 0
 
-      if (error) throw error
       return data?.points || 0
     } catch (err) {
       console.error('Error fetching points:', err)
@@ -24,7 +24,8 @@ export const stepsService = {
         .eq('user_id', userId)
         .order('date', { ascending: true })
 
-      if (error) throw error;
+        if (error || !data) return 0;
+
       const totalPoints = data.reduce((sum, item) => sum + (item.points || 0), 0);
       return totalPoints;
     } catch (err) {

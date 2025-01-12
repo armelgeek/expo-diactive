@@ -29,7 +29,7 @@ export default function SocialScreen({navigation}) {
         fields: [Contacts.Fields.PhoneNumbers, Contacts.Fields.Name],
       })
 
-      // Filtrer les contacts avec des numéros de téléphone
+      // Filtrer les contacts avec des numéros de téléphone et exclure le numéro de la personne connectée
       const contactsWithPhones = data
         .filter(contact => contact.phoneNumbers && contact.phoneNumbers.length > 0)
         .map(contact => ({
@@ -38,21 +38,36 @@ export default function SocialScreen({navigation}) {
           phoneNumber: contact.phoneNumbers[0].number.replace(/\s+/g, ''), // Nettoyer le numéro
         }))
 
-      setContacts(contactsWithPhones)
+      // Exclure le numéro de la personne connectée
+      const currentUserPhoneNumber = await supabase.auth.getUser().then(user => user.phone)
+      const filteredContacts = contactsWithPhones.filter(contact => contact.phoneNumber !== currentUserPhoneNumber)
 
-      // Vérifier quels contacts sont sur l'application
+      // Vérifier quels contacts sont sur l'application et exclure ceux déjà en attente ou amis
       const { data: users, error: usersError } = await supabase
         .from('profile')
-        .select('id, user_name, phone')
-        .in('phone', contactsWithPhones.map(c => c.phoneNumber))
+        .select('id,user_id, user_name, phone')
+        .in('phone', filteredContacts.map(c => c.phoneNumber))
 
-        users.map(user => {
-          user.full_name = user.user_name
-          return user
-        })
-      if (usersError) throw usersError
+        const currentUserIds = users ? users.map(user => user.id) : [];
 
-      setAppUsers(users || [])
+      const { data: existingContacts, error: existingContactsError } = await supabase
+        .from('contacts')
+        .select('contact_id')
+        .in('contact_id', currentUserIds)
+
+        console.log('existingContacts', existingContacts);
+      if (usersError || existingContactsError) throw usersError || existingContactsError
+
+      const appUsers = users
+      .filter(user => !existingContacts.some(ec => ec.contact_id === user.id))
+      .map(user => ({
+        ...user,
+        full_name: user.user_name
+      }));
+      console.log('appUsers', appUsers);
+
+      setContacts(filteredContacts)
+      setAppUsers(appUsers || [])
     } catch (err) {
       console.error('Error loading contacts:', err)
       setError(err.message)
@@ -92,18 +107,17 @@ export default function SocialScreen({navigation}) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Non authentifié')
-
+        console.log('user', user, 'contact', userId);
       const { error: friendError } = await supabase
-        .from('friendships')
+        .from('contacts')
         .insert({
           user_id: user.id,
-          friend_id: userId,
+          contact_id: userId,
           status: 'pending'
         })
 
       if (friendError) throw friendError
 
-      // Rafraîchir la liste
       await loadContacts()
     } catch (err) {
       console.error('Error adding friend:', err)
@@ -111,12 +125,10 @@ export default function SocialScreen({navigation}) {
     }
   }, [loadContacts])
 
-  // Charger les contacts au démarrage
   useEffect(() => {
     loadContacts()
   }, [loadContacts])
 
-  // Filtrer les contacts selon la recherche
   const filteredContacts = contacts.filter(contact =>
     contact.name.toLowerCase().includes(searchQuery.toLowerCase())
   )

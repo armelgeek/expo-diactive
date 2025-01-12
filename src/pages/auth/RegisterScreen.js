@@ -13,10 +13,28 @@ export default function RegisterScreen({ navigation }) {
   async function signUpWithEmail() {
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signUp({
+
+      const { data: { user }, error } = await supabase.auth.signUp({
         email,
         password,
       })
+      /**const profileData = {
+        user_id: user.id,
+        user_name: user.email.split('@')[0],
+        points: 0,
+        is_admin: false,
+        activated: false,
+        first_name: '',
+        last_name: '',
+        address: '',
+        phone: '',
+        email: email,
+        avatar_url: 'default_avatar.png'
+      }**/
+      await supabase
+        .from('profile')
+        .insert(profileData)
+        .select()
       if (error) throw error
       alert('Vérifiez votre email pour confirmer votre inscription!')
       navigation.navigate('Login')
@@ -37,7 +55,7 @@ export default function RegisterScreen({ navigation }) {
         onSubmit={signUpWithEmail}
         loading={loading}
       />
-      
+
       <Button
         title="Déjà inscrit ? Connectez-vous"
         type="clear"
@@ -45,4 +63,4 @@ export default function RegisterScreen({ navigation }) {
       />
     </AuthTemplate>
   )
-} 
+}

@@ -44,19 +44,25 @@ export const profileService = {
 		const { error } = await supabase.auth.signOut()
 		if (error) throw error
 	},
-
 	checkAdminStatus: async () => {
-		const { data: { user } } = await supabase.auth.getUser()
-		if (!user) return false
+		try {
+		  const { data: { user } } = await supabase.auth.getUser()
+		  if (!user) return false
 
-		const { data, error } = await supabase
+		  const { data, error } = await supabase
 			.from('profile')
 			.select('is_admin')
 			.eq('user_id', user.id)
-			.single()
+			.maybeSingle()
 
-		if (error) throw error
-		return data?.is_admin || false
+		  if (error || !data) return false
+
+		  return data.is_admin || false
+
+		} catch (error) {
+		  console.error('Erreur lors de la vérification du statut admin:', error)
+		  return false
+		}
 	},
 
 	getProfile: async (userId) => {
