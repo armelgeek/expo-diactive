@@ -62,10 +62,10 @@ export const PartnerOrdersScreen = ({ route, navigation }) => {
         <Card key={order.id} style={styles.card}>
           <Card.Title
             title={`Commande #${order.id}`}
-            subtitle={`Total: ${order.total_points} points • ${order.status}`}
           />
           <Card.Content>
-            {order.order_items.map(item => (
+            <Text variant="titleMedium">{`Total: ${order.total_points} points • ${order.status}`}</Text>
+            {order.command_items.map(item => (
               <View key={item.id} style={styles.item}>
                 {item.reward ? (
                   <>

@@ -62,15 +62,15 @@ export const cart = {
 
       // Finaliser la commande
       const { data: completedOrder, error: updateError } = await supabase
-        .from('reward_orders')
-        .update({ status: 'completed' })
+        .from('commande')
+        .update({ type: 'validated' })
         .eq('id', order.id)
         .select(`
           id,
           created_at,
           status,
           total_points,
-          reward_order_items!inner (
+          command_items!inner (
             id,
             quantity,
             points_cost,
@@ -81,6 +81,14 @@ export const cart = {
               image_url,
               points_cost,
               stock
+            ),
+            article:product_id (
+              id,
+              label,
+              description,
+              photo,
+              points_cost,
+              quantity
             )
           )
         `)
@@ -97,8 +105,8 @@ export const cart = {
   async cancelOrder(orderId) {
     try {
       const { error } = await supabase
-        .from('reward_orders')
-        .update({ status: 'cancelled' })
+        .from('commande')
+        .update({ type: 'cancelled' })
         .eq('id', orderId)
 
       if (error) throw error
@@ -107,4 +115,4 @@ export const cart = {
       throw error
     }
   }
-} 
+}

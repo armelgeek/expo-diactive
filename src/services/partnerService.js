@@ -89,21 +89,21 @@ export const partnerService = {
 		const { data, error } = await supabase
 			.from('partner')
 			.select(`
-        *,
-        type:type_id (
-          label
-        ),
-        products:product (
-          id,
-          label,
-          description,
-          price,
-          photo,
-          quantity,
-		  points_cost,
-          archive
-        )
-      `)
+				*,
+				type:type_id (
+				label
+				),
+				products:product (
+				id,
+				label,
+				description,
+				price,
+				photo,
+				quantity,
+				points_cost,
+				archive
+				)
+			`)
 			.eq('id', partnerId)
 			.eq('archive', false)
 			.single()
@@ -314,8 +314,8 @@ export const partnerService = {
 					id,
 					created_at,
 					type,
-					total_points,
-					partner_id,
+					total_price,
+					partner_id
 				`)
 				.eq('partner_id', partnerId)
 				.order('created_at', { ascending: false });
@@ -340,10 +340,10 @@ export const partnerService = {
 				// Pour chaque item, récupérer l'article ou la récompense associée
 				const itemsWithDetails = await Promise.all(items.map(async (item) => {
 					let product = null;
-					if (item.article_id) {
+					if (item.product_id) {
 						const { data: article, error: articleError } = await supabase
 							.from('article')
-							.select('label, description, photo')
+							.select('label, description, photo', 'points_cost')
 							.eq('id', item.product_id)
 							.single();
 
@@ -351,7 +351,8 @@ export const partnerService = {
 						product = {
 							title: article.label,
 							description: article.description,
-							image_url: article.photo
+							image_url: article.photo,
+							points_cost: article.points_cost
 						};
 					}
 
@@ -359,7 +360,7 @@ export const partnerService = {
 					if (item.reward_id) {
 						const { data: rewardData, error: rewardError } = await supabase
 							.from('reward')
-							.select('label, description, image')
+							.select('label, description, image','point')
 							.eq('id', item.reward_id)
 							.single();
 
@@ -367,7 +368,8 @@ export const partnerService = {
 						reward = {
 							title: rewardData.label,
 							description: rewardData.description,
-							image_url: rewardData.image
+							image_url: rewardData.image,
+							points_cost: rewardData.point
 						};
 					}
 
@@ -414,7 +416,7 @@ export const partnerService = {
 		try {
 			const { error } = await supabase
 				.from('commande')
-				.update({ status: 'validated' })
+				.update({ type: 'validated' })
 				.eq('id', orderId)
 
 			if (error) throw error
