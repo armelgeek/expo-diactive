@@ -79,6 +79,7 @@ const ProfileStack = () => (
       component={ManageRewards}
       options={{ title: 'Gérer les récompenses' }}
     />
+    
     <Stack.Screen
       name="Orders"
       component={OrdersScreen}

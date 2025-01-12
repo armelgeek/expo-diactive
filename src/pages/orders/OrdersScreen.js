@@ -18,7 +18,7 @@ export const OrdersScreen = ({ navigation }) => {
       if (!user) throw new Error('Non authentifié')
 
       const data = await orderService.fetchOrders(user.id)
-      setOrders(data)
+      setOrders(data || [])
     } catch (err) {
       console.error('Error fetching orders:', err)
       setError(err.message)
@@ -70,7 +70,7 @@ export const OrdersScreen = ({ navigation }) => {
         <Card key={order.id} style={styles.card}>
           <Card.Title
             title={`Commande #${order.id}`}
-            subtitle={`Chez ${order.partner.nom}`}
+            subtitle={`Chez ${order.partner.company_name}`}
           />
           <Card.Content>
             <View style={styles.statusContainer}>
@@ -88,13 +88,16 @@ export const OrdersScreen = ({ navigation }) => {
               <View key={item.id} style={styles.item}>
                 {item.reward ? (
                   <>
-                    <Text variant="titleMedium">{item.reward.label}</Text>
-                    <Text variant="bodySmall">{item.quantite} x {item.point_cost} points</Text>
+                    <Text variant="titleMedium">{item.reward.title}</Text>
+                    <Text variant="titleMedium">Recompense</Text>
+
+                    <Text variant="bodySmall">{item.quantity} x {item.points_cost} points</Text>
                   </>
                 ) : item.product ? (
                   <>
-                    <Text variant="titleMedium">{item.product.label}</Text>
-                    <Text variant="bodySmall">{item.quantite} x {item.point_cost} points</Text>
+                    <Text variant="titleMedium">{item.product.title}</Text>
+                    <Text variant="titleMedium">Commande</Text>
+                    <Text variant="bodySmall">{item.quantity} x {item.points_cost} points</Text>
                   </>
                 ) : null}
               </View>

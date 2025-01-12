@@ -31,10 +31,10 @@ export const CartScreen = ({ navigation }) => {
   if (items.length === 0) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <MaterialCommunityIcons 
-          name="cart-outline" 
-          size={64} 
-          color={theme.colors.primary} 
+        <MaterialCommunityIcons
+          name="cart-outline"
+          size={64}
+          color={theme.colors.primary}
         />
         <Text variant="titleMedium" style={styles.emptyText}>
           Votre panier est vide
@@ -64,6 +64,7 @@ export const CartScreen = ({ navigation }) => {
                   <View style={styles.itemHeader}>
                     <View style={styles.itemInfo}>
                       <Text variant="titleMedium">{item.title}</Text>
+                      <Text variant="titleMedium">{item.partner?.company_name}</Text>
                       <Text variant="bodyMedium" style={styles.points}>
                         {item.points_cost} points
                       </Text>
@@ -110,6 +111,7 @@ export const CartScreen = ({ navigation }) => {
                   <View style={styles.itemHeader}>
                     <View style={styles.itemInfo}>
                       <Text variant="titleMedium">{item.title}</Text>
+                      <Text variant="titleMedium">{item.partner?.company_name}</Text>
                       <Text variant="bodyMedium" style={styles.points}>
                         {item.points_cost} points
                       </Text>
@@ -240,4 +242,4 @@ const styles = StyleSheet.create({
   divider: {
     marginVertical: 8,
   },
-}) 
+})

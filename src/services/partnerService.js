@@ -17,12 +17,12 @@ export const partnerService = {
 		if (data) {
 			data.map(item => {
 				item.company_name = item.nom,
-				item.logo_url = item.logo,
-				item.category_id = item.type_id,
-				item.nom = undefined,
-				item.logo = undefined,
-				item.type_id = undefined,
-				item.type = undefined
+					item.logo_url = item.logo,
+					item.category_id = item.type_id,
+					item.nom = undefined,
+					item.logo = undefined,
+					item.type_id = undefined,
+					item.type = undefined
 
 				return item
 			})
@@ -307,57 +307,105 @@ export const partnerService = {
 	// Get partner orders
 	getPartnerOrders: async (partnerId) => {
 		try {
-			const { data, error } = await supabase
+			// Récupérer d'abord les commandes
+			const { data: orders, error: ordersError } = await supabase
 				.from('commande')
 				.select(`
 					id,
 					created_at,
-					status,
+					type,
 					total_points,
-					partner:partner_id (
-						nom,
-						description
-					),
-					command_items (
-						id,
-						quantity,
-						points_cost,
-						reward:reward_id (
-							title,
-							description,
-							image_url
-						),
-						article:article_id (
-							label,
-							description,
-							photo
-						)
-					)
+					partner_id,
 				`)
 				.eq('partner_id', partnerId)
-				.order('created_at', { ascending: false })
+				.order('created_at', { ascending: false });
 
-			if (error) throw error
+			if (ordersError) throw ordersError;
 
-			// Map the data to match the expected format
-			return data.map(order => ({
-				...order,
-				partner: {
-					...order.partner,
-					company_name: order.partner.nom
-				},
-				order_items: order.commande_items.map(item => ({
-					...item,
-					product: item.article ? {
-						title: item.article.label,
-						description: item.article.description,
-						image_url: item.article.photo
-					} : null
-				}))
-			}))
+			// Pour chaque commande, récupérer les items
+			const ordersWithItems = await Promise.all(orders.map(async (order) => {
+				const { data: items, error: itemsError } = await supabase
+					.from('command_items')
+					.select(`
+						id,
+						quantite,
+						point_cost,
+						product_id,
+						reward_id
+					`)
+					.eq('commande_id', order.id);
+
+				if (itemsError) throw itemsError;
+
+				// Pour chaque item, récupérer l'article ou la récompense associée
+				const itemsWithDetails = await Promise.all(items.map(async (item) => {
+					let product = null;
+					if (item.article_id) {
+						const { data: article, error: articleError } = await supabase
+							.from('article')
+							.select('label, description, photo')
+							.eq('id', item.product_id)
+							.single();
+
+						if (articleError) throw articleError;
+						product = {
+							title: article.label,
+							description: article.description,
+							image_url: article.photo
+						};
+					}
+
+					let reward = null;
+					if (item.reward_id) {
+						const { data: rewardData, error: rewardError } = await supabase
+							.from('reward')
+							.select('label, description, image')
+							.eq('id', item.reward_id)
+							.single();
+
+						if (rewardError) throw rewardError;
+						reward = {
+							title: rewardData.label,
+							description: rewardData.description,
+							image_url: rewardData.image
+						};
+					}
+
+					return {
+						id: item.id,
+						quantity: item.quantite,
+						points_cost: item.point_cost,
+						product,
+						reward
+					};
+				}));
+
+				// Récupérer les infos du partenaire
+				const { data: partner, error: partnerError } = await supabase
+					.from('partner')
+					.select('nom, description')
+					.eq('id', order.partner_id)
+					.single();
+
+				if (partnerError) throw partnerError;
+
+				return {
+					...order,
+					status: order.type,
+					total_points: order.total_price,
+					partner: {
+						...partner,
+						company_name: partner.nom,
+
+					},
+					command_items: itemsWithDetails
+				};
+			}));
+
+			return ordersWithItems;
 		} catch (error) {
-			console.error('Error fetching partner orders:', error)
-			throw error
+			console.error('Error fetching partner orders:', error);
+			throw error;
 		}
 	},
 

@@ -48,19 +48,21 @@ export const rewardOrderService = {
     }
   },
 
-  async createOrder(userId, items, totalPoints) {
+  async createOrder(userId, items, partnerId, totalPoints) {
     try {
       const hasEnoughPoints = await this.checkUserPoints(userId, totalPoints)
       if (!hasEnoughPoints) {
         throw new Error('Insufficient points')
       }
 
+
       const { data: order, error: orderError } = await supabase
         .from('commande')
         .insert({
           user_id: userId,
           type: 'pending',
-          total_points: totalPoints,
+          total_price: totalPoints,
+          partner_id: partnerId,
           archive: false
         })
         .select()
@@ -70,12 +72,12 @@ export const rewardOrderService = {
 
       for (const item of items) {
         const { error: itemError } = await supabase
-          .from('recompense')
+          .from('command_items')
           .insert({
-            article_id: order.id,
-            reward_id: item.id,
-            nombre: item.quantity,
-            point: item.points_cost,
+            commande_id: order.id,
+            [item.type === 'reward' ? 'reward_id' : 'product_id']: item.id,
+            quantite: item.quantity,
+            point_cost: item.points_cost,
             archive: false
           })
 
@@ -83,47 +85,6 @@ export const rewardOrderService = {
           await this.cancelOrder(order.id)
           throw itemError
         }
-      }
-
-      const { data: completedOrder, error: updateError } = await supabase
-        .from('commande')
-        .update({ type: 'completed' })
-        .eq('id', order.id)
-        .select(`
-          id,
-          created_at,
-          type,
-          total_points,
-          recompense!inner (
-            id,
-            nombre,
-            point,
-            reward:reward (
-              id,
-              label,
-              description,
-              image
-            )
-          )
-        `)
-        .single()
-
-      if (updateError) throw updateError
-
-      return {
-        ...completedOrder,
-        status: completedOrder.type,
-        reward_order_items: completedOrder.recompense.map(item => ({
-          id: item.id,
-          quantity: item.nombre,
-          points_cost: item.point,
-          reward: {
-            id: item.reward.id,
-            title: item.reward.label,
-            description: item.reward.description,
-            image_url: item.reward.image
-          }
-        }))
       }
     } catch (error) {
       console.error('Error creating order:', error)

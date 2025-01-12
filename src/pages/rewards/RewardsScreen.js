@@ -92,7 +92,7 @@ export const RewardsScreen = ({ navigation }) => {
         duration={2000}
         action={{
           label: 'Voir',
-          onPress: () => navigation.navigate('Marketplace', { screen: 'Cart' }),
+          onPress: () => navigation.navigate('Cart'),
         }}
       >
         Article ajouté au panier

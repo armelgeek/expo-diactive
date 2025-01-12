@@ -10,15 +10,17 @@ export const useCart = () => {
 
   // Ajouter un article au panier
   const addToCart = useCallback((item, type = 'reward') => {
+
+
     setItems(currentItems => {
       const existingItem = currentItems.find(i => i.id === item.id && i.type === type)
-      
+
       if (existingItem) {
         if (type === 'reward' && existingItem.quantity >= item.stock) {
           setError('Stock maximum atteint pour cette récompense')
           return currentItems
         }
-        
+
         return currentItems.map(i =>
           i.id === item.id && i.type === type
             ? { ...i, quantity: i.quantity + 1 }
@@ -86,7 +88,7 @@ export const useCart = () => {
       if (!user) throw new Error('Vous devez être connecté pour passer une commande')
 
       const totalPoints = getTotalPoints()
-      
+
       // Vérifier si l'utilisateur a assez de points
       const hasEnoughPoints = await cartService.checkUserPoints(user.id, totalPoints)
       if (!hasEnoughPoints) {
@@ -102,22 +104,20 @@ export const useCart = () => {
         return acc
       }, {})
 
-      // Créer une commande pour chaque partenaire
       for (const [partnerId, partnerItems] of Object.entries(itemsByPartner)) {
         const orderTotal = partnerItems.reduce((sum, item) => sum + (item.points_cost * item.quantity), 0)
 
-        // Créer la commande
-        const order = await rewardOrderService.createOrder(user.id, partnerItems, orderTotal)
+        await rewardOrderService.createOrder(user.id, partnerItems,partnerId, orderTotal)
 
-        // Mettre à jour les stocks si nécessaire
         for (const item of partnerItems) {
           if (item.type === 'reward') {
             await rewardOrderService.updateRewardStock(item.id, item.quantity)
+          }else{
+
           }
         }
       }
 
-      // Vider le panier après succès
       clearCart()
       return true
     } catch (err) {
@@ -139,4 +139,4 @@ export const useCart = () => {
     clearCart,
     checkout
   }
-} 
+}

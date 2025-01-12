@@ -149,62 +149,102 @@ export const orderService = {
 
 	// Fetch orders with items and rewards
 	fetchOrders: async (userId) => {
-		const { data, error } = await supabase
-			.from('commande')
-			.select(`
-				id,
-				created_at,
-				status,
-				total_points,
-				partner:partner_id (
-					nom,
-					logo
-				),
-				command_items (
+		try {
+			// Récupérer d'abord les commandes
+			const { data: orders, error: ordersError } = await supabase
+				.from('commande')
+				.select(`
 					id,
-					quantite,
-					point_cost,
-					reward:reward_id (
-						label,
-						description,
-						image
-					),
-					article:article_id (
-						label,
-						description,
-						photo
+					created_at,
+					type,
+					total_price,
+					partner:partner_id (
+						nom,
+						logo
 					)
-				)
-			`)
-			.eq('user_id', userId)
-			.eq('archive', false)
-			.order('created_at', { ascending: false })
+				`)
+				.eq('user_id', userId)
+				.eq('archive', false)
+				.order('created_at', { ascending: false })
 
-		if (error) throw error
+			if (ordersError) throw ordersError
 
-		// Map the data to match the expected format
-		return data.map(order => ({
-			...order,
-			partner: {
-				...order.partner,
-				company_name: order.partner.nom,
-				logo_url: order.partner.logo
-			},
-			order_items: order.command_items.map(item => ({
-				id: item.id,
-				quantity: item.quantite,
-				points_cost: item.point_cost,
-				reward: item.reward ? {
-					title: item.reward.label,
-					description: item.reward.description,
-					image_url: item.reward.image
-				} : null,
-				product: item.article ? {
-					title: item.article.label,
-					description: item.article.description,
-					image_url: item.article.photo
-				} : null
+			// Pour chaque commande, récupérer ses items
+			const ordersWithItems = await Promise.all(orders.map(async (order) => {
+				const { data: items, error: itemsError } = await supabase
+					.from('command_items')
+					.select(`
+						id,
+						quantite,
+						point_cost,
+						reward_id,
+						product_id
+					`)
+					.eq('commande_id', order.id)
+
+				if (itemsError) throw itemsError
+
+				// Pour chaque item, récupérer l'article ou la récompense associée
+				const itemsWithDetails = await Promise.all(items.map(async (item) => {
+					let reward = null
+					let product = null
+
+					if (item.reward_id) {
+						const { data: rewardData, error: rewardError } = await supabase
+							.from('reward')
+							.select('label, description, image')
+							.eq('id', item.reward_id)
+							.single()
+
+						if (rewardError) throw rewardError
+						reward = {
+							title: rewardData.label,
+							description: rewardData.description,
+							image_url: rewardData.image
+						}
+					}
+
+					if (item.product_id) {
+						const { data: articleData, error: articleError } = await supabase
+							.from('article')
+							.select('label, description, photo')
+							.eq('id', item.product_id)
+							.single()
+
+						if (articleError) throw articleError
+						product = {
+							title: articleData.label,
+							description: articleData.description,
+							image_url: articleData.photo
+						}
+					}
+
+					return {
+						id: item.id,
+
+						quantity: item.quantite,
+						points_cost: item.point_cost,
+						reward,
+						product
+					}
+				}))
+				return {
+					...order,
+					status: order.type,
+					total_points: order.total_price,
+					partner: order.partner ? {
+						...order.partner,
+						company_name: order.partner.nom,
+						logo_url: order.partner.logo
+					} : null,
+					command_items: itemsWithDetails
+				}
 			}))
-		}))
+
+			return ordersWithItems
+		} catch (error) {
+			console.error('Error fetching orders:', error)
+			throw error
+		}
 	}
 }

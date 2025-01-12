@@ -6,8 +6,15 @@ const mapRewardFromDB = (dbReward) => {
     id: dbReward.id,
     title: dbReward.label || '',
     description: dbReward.description || '',
-    pointsCost: dbReward.point || 0,
+    points_cost: dbReward.point || 0,
     partner_id: dbReward.partner_id || null,
+    partner: dbReward.partner ? {
+      id: dbReward.partner.id,
+      company_name: dbReward.partner.nom,
+      description: dbReward.partner.description,
+      image_url: dbReward.partner.logo,
+      address: dbReward.partner.address
+    } : null,
     stock: dbReward.stock || 0,
     imageUrl: dbReward.image || ''
   }
@@ -20,10 +27,10 @@ const mapOrderFromDB = (dbOrder) => {
     createdAt: dbOrder.created_at,
     status: dbOrder.type || 'pending',
     totalPoints: dbOrder.total_points || 0,
-    items: (dbOrder.recompense || []).map(item => ({
+    items: (dbOrder.command_items || []).map(item => ({
       id: item.id,
-      quantity: item.nombre || 1,
-      pointsCost: item.point || 0,
+      quantity: item.quantite || 1,
+      points_cost: item.point_cost || 0,
       reward: item.reward ? mapRewardFromDB(item.reward) : null
     }))
   }
@@ -50,7 +57,22 @@ export const rewardsApi = {
     try {
       const { data, error } = await supabase
         .from('reward')
-        .select('*')
+        .select(`
+          id,
+          label,
+          description,
+          image,
+          point,
+          stock,
+          partner_id,
+          partner:partner(
+            id,
+            nom,
+            description,
+            logo,
+            address
+          )
+        `)
         .gt('stock', 0)
         //.eq('archive', false)
         .order('point', { ascending: true })
@@ -65,50 +87,79 @@ export const rewardsApi = {
 
   async fetchUserOrders(userId) {
     try {
-      const { data, error } = await supabase
+      // Récupérer d'abord les commandes
+      const { data: orders, error: ordersError } = await supabase
         .from('commande')
         .select(`
           id,
           created_at,
           type,
-          total_points,
-          command_items (
+          total_price
+        `)
+        .eq('user_id', userId)
+        .eq('type', 'completed')
+        .order('created_at', { ascending: false })
+
+      if (ordersError) throw ordersError
+
+      // Pour chaque commande, récupérer ses items
+      const ordersWithItems = await Promise.all(orders.map(async (order) => {
+        const { data: items, error: itemsError } = await supabase
+          .from('command_items')
+          .select(`
             id,
             quantite,
             point_cost,
-            reward:reward_id (
+            reward_id
+          `)
+          .eq('commande_id', order.id)
+
+        if (itemsError) throw itemsError
+
+        // Pour chaque item, récupérer la récompense associée
+        const itemsWithRewards = await Promise.all(items.map(async (item) => {
+          if (!item.reward_id) return null
+
+          const { data: reward, error: rewardError } = await supabase
+            .from('reward')
+            .select(`²
               id,
               label,
               description,
               image,
               point,
               stock
-            )
-          )
-        `)
-        .eq('user_id', userId)
-        .eq('type', 'completed')
-        .order('created_at', { ascending: false })
+            `)
+            .eq('id', item.reward_id)
+            .single()
 
-      if (error) throw error
-      return (data || []).map(order => ({
-        id: order.id,
-        created_at: order.created_at,
-        total_points: order.total_points,
-        items: order.command_items.map(item => ({
-          id: item.id,
-          quantity: item.quantite,
-          points_cost: item.point_cost,
-          reward: item.reward ? {
-            id: item.reward.id,
-            title: item.reward.label,
-            description: item.reward.description,
-            image_url: item.reward.image,
-            points_cost: item.reward.point,
-            stock: item.reward.stock
-          } : null
+          if (rewardError) throw rewardError
+
+          return {
+            id: item.id,
+            quantity: item.quantite,
+            points_cost: item.point_cost,
+            total_price: item.total_price,
+            reward: reward ? {
+              id: reward.id,
+              title: reward.label,
+              description: reward.description,
+              image_url: reward.image,
+              points_cost: reward.point,
+              stock: reward.stock
+            } : null
+          }
         }))
+
+        return {
+          id: order.id,
+          created_at: order.created_at,
+          total_points: order.total_points,
+          items: itemsWithRewards.filter(Boolean)
+        }
       }))
+
+      return ordersWithItems
     } catch (error) {
       console.error('Error fetching user orders:', error)
       throw error

@@ -786,3 +786,5 @@ begin
     'best_rewards', coalesce(best_rewards, '[]'::json)
   );
 end;
+
+change id -> type uuid article table
