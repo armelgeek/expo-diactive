@@ -1,9 +1,11 @@
-import React, { useState } from 'react'
-import { View, StyleSheet, ScrollView, Dimensions } from 'react-native'
-import { Modal, Portal, Text, Button, IconButton } from 'react-native-paper'
+import React, { useState, useEffect, useRef } from 'react'
+import { View, StyleSheet, ScrollView, Dimensions, Animated } from 'react-native'
+import { Modal, Portal, Text, Button, IconButton, ProgressBar } from 'react-native-paper'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const STORAGE_KEY = 'onboarding_shown'
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
+const SLIDE_DURATION = 10000
 
 const slides = [
 	{
@@ -25,10 +27,29 @@ const slides = [
 
 export const OnboardingModal = ({ visible, onDismiss, onPostpone }) => {
 	const [currentSlide, setCurrentSlide] = useState(0)
+	const [isPaused, setIsPaused] = useState(false)
+	const progressAnimation = useRef(new Animated.Value(0)).current
+	const slideTimer = useRef(null)
+
+	const startSlideTimer = () => {
+		progressAnimation.setValue(0)
+
+		Animated.timing(progressAnimation, {
+			toValue: 1,
+			duration: SLIDE_DURATION,
+			useNativeDriver: false
+		}).start(({ finished }) => {
+			if (finished && !isPaused) {
+				handleNext()
+			}
+		})
+	}
 
 	const handleNext = () => {
 		if (currentSlide < slides.length - 1) {
 			setCurrentSlide(currentSlide + 1)
+		} else {
+			handleFinish()
 		}
 	}
 
@@ -56,6 +77,25 @@ export const OnboardingModal = ({ visible, onDismiss, onPostpone }) => {
 		}
 	}
 
+	const pauseTimer = () => {
+		setIsPaused(true)
+		progressAnimation.stopAnimation()
+	}
+
+	const resumeTimer = () => {
+		setIsPaused(false)
+		startSlideTimer()
+	}
+
+	useEffect(() => {
+		if (visible) {
+			startSlideTimer()
+		}
+		return () => {
+			progressAnimation.stopAnimation()
+		}
+	}, [visible, currentSlide])
+
 	return (
 		<Portal>
 			<Modal
@@ -71,19 +111,32 @@ export const OnboardingModal = ({ visible, onDismiss, onPostpone }) => {
 						onPress={onDismiss}
 					/>
 
-					<ScrollView
-						horizontal
-						pagingEnabled
-						showsHorizontalScrollIndicator={false}
-						scrollEnabled={false}
-						contentContainerStyle={styles.slidesContainer}
+					<Animated.View
+						style={[
+							styles.progressBar,
+							{
+								width: progressAnimation.interpolate({
+									inputRange: [0, 1],
+									outputRange: ['0%', '100%']
+								})
+							}
+						]}
+					/>
+
+					<View
+						style={styles.content}
+						onTouchStart={pauseTimer}
+						onTouchEnd={resumeTimer}
 					>
 						{slides.map((slide, index) => (
 							<View
 								key={index}
 								style={[
 									styles.slide,
-									{ transform: [{ translateX: (index - currentSlide) * Dimensions.get('window').width }] }
+									{
+										opacity: currentSlide === index ? 1 : 0,
+										transform: [{ scale: currentSlide === index ? 1 : 0.8 }]
+									}
 								]}
 							>
 								<IconButton
@@ -99,7 +152,7 @@ export const OnboardingModal = ({ visible, onDismiss, onPostpone }) => {
 								</Text>
 							</View>
 						))}
-					</ScrollView>
+					</View>
 
 					<View style={styles.pagination}>
 						{slides.map((_, index) => (
@@ -161,30 +214,44 @@ const styles = StyleSheet.create({
 	modal: {
 		backgroundColor: 'white',
 		margin: 20,
-		borderRadius: 8,
+		borderRadius: 16,
 		padding: 20,
-		maxHeight: '80%',
+		height: SCREEN_HEIGHT * 0.7,
+		justifyContent: 'center',
 	},
 	container: {
 		flex: 1,
+		position: 'relative',
 	},
 	closeButton: {
 		position: 'absolute',
-		right: 0,
-		top: 0,
+		right: -10,
+		top: -10,
 		zIndex: 1,
 	},
-	slidesContainer: {
-		flexGrow: 1,
+	progressBar: {
+		height: 3,
+		backgroundColor: '#2196F3',
+		position: 'absolute',
+		top: 0,
+		left: 0,
 	},
-	slide: {
-		width: Dimensions.get('window').width - 80,
+	content: {
+		flex: 1,
 		alignItems: 'center',
 		justifyContent: 'center',
+		position: 'relative',
+	},
+	slide: {
 		position: 'absolute',
+		width: '100%',
+		alignItems: 'center',
+		justifyContent: 'center',
 	},
 	slideIcon: {
 		marginBottom: 20,
+		backgroundColor: '#f0f0f0',
+		borderRadius: 40,
 	},
 	title: {
 		textAlign: 'center',
@@ -195,6 +262,7 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 		marginBottom: 24,
 		color: '#666',
+		paddingHorizontal: 20,
 	},
 	pagination: {
 		flexDirection: 'row',
@@ -213,7 +281,7 @@ const styles = StyleSheet.create({
 	},
 	buttonsContainer: {
 		flexDirection: 'row',
-		justifyContent: 'space-between',
+		justifyContent: 'center',
 		paddingHorizontal: 20,
 	},
 	button: {
