@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { stepsService } from '../services/api/stepsService'
 import { user as userService } from '../services/api/user'
 import { supabase } from '../services/supabase'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export const useSteps = () => {
   const [loading, setLoading] = useState(false)
@@ -9,6 +10,7 @@ export const useSteps = () => {
   const [points, setPoints] = useState(0)
   const [cumulativePoints, setCumulativePoints] = useState(0)
   const [weeklyStats, setWeeklyStats] = useState([])
+  const [isValidated, setIsValidated] = useState(false)
   const dailyGoal = 10000 // Objectif quotidien de pas
 
   const fetchUserPoints = async () => {
@@ -19,7 +21,7 @@ export const useSteps = () => {
       const cumulativePoints = await stepsService.fetchCumulativePoints(user.id)
       setCumulativePoints(cumulativePoints)
     } catch (err) {
-      console.error('Erreur lors de la récupération  des points:', err)
+      console.error('Erreur lors de la récupération des points:', err)
     }
   }
 
@@ -48,13 +50,7 @@ export const useSteps = () => {
       setLoading(true)
       const user = await userService.getUser();
       await stepsService.updateSteps(user.id, newSteps)
-
-      // Rafraîchir toutes les données
-      await Promise.all([
-        fetchTodaySteps(),
-        fetchUserPoints(),
-        fetchWeeklyStats(),
-      ])
+      setSteps(newSteps)
     } catch (err) {
       console.error('Erreur lors de la mise à jour des pas:', err)
       throw err
@@ -78,8 +74,44 @@ export const useSteps = () => {
     }
   }
 
+  const validateDailySteps = async () => {
+    try {
+      setLoading(true)
+      const user = await userService.getUser()
+      await stepsService.validateDailySteps(user.id)
+      setIsValidated(true)
+      setSteps(0) // Réinitialiser les pas après validation
+      await refreshData()
+    } catch (err) {
+      console.error('Erreur lors de la validation des pas:', err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const checkValidationStatus = async () => {
+    try {
+      const user = await userService.getUser()
+      const today = new Date().toISOString().split('T')[0]
+      const { data, error } = await supabase
+        .from('daily_points')
+        .select('validated_at')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .single()
+
+      if (!error && data?.validated_at) {
+        setIsValidated(true)
+      }
+    } catch (err) {
+      console.error('Erreur lors de la vérification du statut de validation:', err)
+    }
+  }
+
   useEffect(() => {
     refreshData()
+    checkValidationStatus()
   }, [])
 
   // Écouter les notifications de mise à jour des points
@@ -111,7 +143,9 @@ export const useSteps = () => {
     cumulativePoints,
     weeklyStats,
     dailyGoal,
+    isValidated,
     updateSteps,
     refreshData,
+    validateDailySteps,
   }
 }

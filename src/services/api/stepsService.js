@@ -1,4 +1,10 @@
 import { supabase } from '../supabase'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
+const STORAGE_KEYS = {
+  TODAY_STEPS: 'today_steps',
+  LAST_UPDATE: 'last_steps_update'
+}
 
 export const stepsService = {
   async fetchUserPoints(userId) {
@@ -24,7 +30,7 @@ export const stepsService = {
         .eq('user_id', userId)
         .order('date', { ascending: true })
 
-        if (error || !data) return 0;
+      if (error || !data) return 0;
 
       const totalPoints = data.reduce((sum, item) => sum + (item.points || 0), 0);
       return totalPoints;
@@ -36,19 +42,20 @@ export const stepsService = {
 
   async fetchTodaySteps(userId) {
     try {
-      const today = new Date().toISOString().split('T')[0]
-      const { data, error } = await supabase
-        .from('daily_points')
-        .select('steps_count, points')
-        .eq('user_id', userId)
-        .eq('date', today)
-        .single()
+      const storedSteps = await AsyncStorage.getItem(STORAGE_KEYS.TODAY_STEPS)
+      const lastUpdate = await AsyncStorage.getItem(STORAGE_KEYS.LAST_UPDATE)
 
-      if (error && error.code !== 'PGRST116') throw error // PGRST116 = not found
-      return data?.steps_count || 0
+      const today = new Date().toISOString().split('T')[0]
+      if (lastUpdate !== today) {
+        await AsyncStorage.setItem(STORAGE_KEYS.TODAY_STEPS, '0')
+        await AsyncStorage.setItem(STORAGE_KEYS.LAST_UPDATE, today)
+        return 0
+      }
+
+      return parseInt(storedSteps || '0', 10)
     } catch (err) {
-      console.error('Error fetching steps today:', err)
-      throw err
+      console.error('Error fetching steps from storage:', err)
+      return 0
     }
   },
 
@@ -70,24 +77,61 @@ export const stepsService = {
     }
   },
 
+  //TODO: lié a l'utilisateur
   async updateSteps(userId, newSteps) {
     try {
       const today = new Date().toISOString().split('T')[0]
-      const points = Math.floor(newSteps / 100) // 1 point per 100 steps
 
-      const { error } = await supabase
+      // Sauvegarder dans le stockage local
+      await AsyncStorage.setItem(STORAGE_KEYS.TODAY_STEPS, newSteps.toString())
+      await AsyncStorage.setItem(STORAGE_KEYS.LAST_UPDATE, today)
+    } catch (err) {
+      console.error('Error updating steps in storage:', err)
+      throw err
+    }
+  },
+
+  async validateDailySteps(userId) {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+
+      // Récupérer les pas du stockage local
+      const storedSteps = await AsyncStorage.getItem(STORAGE_KEYS.TODAY_STEPS)
+      const steps = parseInt(storedSteps || '0', 10)
+      const points = Math.floor(steps / 100) // 1 point per 100 steps
+
+      // Vérifier si les pas ont déjà été validés aujourd'hui
+      const { data: existingValidation, error: validationError } = await supabase
+        .from('daily_points')
+        .select('validated_at')
+        .eq('user_id', userId)
+        .eq('date', today)
+        .single()
+
+      if (validationError && validationError.code !== 'PGRST116') throw validationError
+      if (existingValidation?.validated_at) {
+        throw new Error('Les pas ont déjà été validés aujourd\'hui')
+      }
+
+      const { error: updateError } = await supabase
         .from('daily_points')
         .upsert({
           user_id: userId,
           date: today,
-          steps_count: newSteps,
-          points: points
+          steps_count: steps,
+          points: points,
+          validated_at: new Date().toISOString(),
+          is_validated: true
         })
 
-      if (error) throw error
-    } catch (err) {
-      console.error('Error updating steps:', err)
-      throw err
+      if (updateError) throw updateError
+
+      await AsyncStorage.setItem(STORAGE_KEYS.TODAY_STEPS, '0')
+
+      return { success: true }
+    } catch (error) {
+      console.error('Error validating daily steps:', error)
+      throw error
     }
   }
 }
