@@ -7,7 +7,6 @@ export const notificationService = {
 				.from('notifications')
 				.select('*', { count: 'exact' })
 				.eq('user_id', userId)
-				.eq('archive', false)
 				.order('created_at', { ascending: false })
 				.range(options.offset, options.offset + options.limit - 1)
 

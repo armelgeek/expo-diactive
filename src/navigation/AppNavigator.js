@@ -2,6 +2,8 @@ import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { Icon } from 'react-native-elements'
+import { NotificationButton } from '../molecules/NotificationButton'
+import { NotificationsScreen } from '../pages/notifications/NotificationsScreen'
 
 // Screens
 import HomeScreen from '../pages/home/HomeScreen'
@@ -9,8 +11,8 @@ import DashboardScreen from '../pages/dashboard/DashboardScreen'
 import { RewardsScreen } from '../pages/rewards/RewardsScreen'
 import { DealsScreen } from '../pages/deals/DealsScreen'
 import SocialScreen from '../pages/social/SocialScreen'
-import {MarketplaceScreen} from '../pages/marketplace/MarketplaceScreen'
-import {PartnerDetailsScreen} from '../pages/marketplace/PartnerDetailsScreen'
+import { MarketplaceScreen } from '../pages/marketplace/MarketplaceScreen'
+import { PartnerDetailsScreen } from '../pages/marketplace/PartnerDetailsScreen'
 import { ProductDetailsScreen } from '../pages/marketplace/ProductDetailsScreen'
 import ProfileScreen from '../pages/profile/ProfileScreen'
 import ReviewsScreen from '../pages/reviews/ReviewsScreen'
@@ -23,7 +25,7 @@ import { CartScreen } from '../pages/marketplace/CartScreen'
 import FriendsActivityScreen from '../pages/social/FriendsActivityScreen'
 import { ChangePasswordScreen } from '../pages/profile/ChangePasswordScreen'
 import { DeleteAccountScreen } from '../pages/profile/DeleteAccountScreen'
-import {InstitutesScreen}  from '../pages/social/InstitutesScreen'
+import { InstitutesScreen } from '../pages/social/InstitutesScreen'
 import { DonationsScreen } from '../pages/social/DonationsScreen'
 import { PartnerOrdersScreen } from '../pages/partner/PartnerOrdersScreen'
 import { QRCodeScreen } from '../pages/orders/QRCodeScreen'
@@ -62,7 +64,10 @@ const ProfileStack = () => (
     <Stack.Screen
       name="ProfileMain"
       component={ProfileScreen}
-      options={{ title: 'Profil' }}
+      options={{
+        title: 'Profil',
+        headerRight: () => <NotificationButton />
+      }}
     />
     <Stack.Screen
       name="CreatePartner"
@@ -79,7 +84,7 @@ const ProfileStack = () => (
       component={ManageRewards}
       options={{ title: 'Gérer les récompenses' }}
     />
-    
+
     <Stack.Screen
       name="Orders"
       component={OrdersScreen}
@@ -134,6 +139,11 @@ const ProfileStack = () => (
       name="ScanQRCode"
       component={ScanQRScreen}
       options={{ title: 'Scanner QR Code' }}
+    />
+    <Stack.Screen
+      name="Notifications"
+      component={NotificationsScreen}
+      options={{ title: 'Notifications' }}
     />
   </Stack.Navigator>
 )
