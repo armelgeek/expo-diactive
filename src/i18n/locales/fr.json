@@ -36,5 +36,28 @@
       "title": "Langue",
       "select": "Sélectionner une langue"
     }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "empty": "Aucune notification",
+    "types": {
+      "steps_validated": {
+        "title": "Pas validés",
+        "message": "Vos {{count}} pas ont été validés avec succès !"
+      },
+      "points_earned": {
+        "title": "Points gagnés",
+        "message": "Vous avez gagné {{count}} points !"
+      },
+      "reward_available": {
+        "title": "Nouvelle récompense",
+        "message": "Une nouvelle récompense est disponible !"
+      },
+      "goal_reached": {
+        "title": "Objectif atteint",
+        "message": "Félicitations ! Vous avez atteint votre objectif de {{count}} pas !"
+      }
+    }
   }
 }
