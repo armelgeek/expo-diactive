@@ -1,0 +1,40 @@
+{
+  "common": {
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "close": "Cerrar",
+    "later": "Más tarde",
+    "understood": "¡Entendido!",
+    "validate": "Validar",
+    "home": "Inicio",
+    "tutorial": "Ver tutorial",
+    "points": "Puntos disponibles: {{count}}"
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Bienvenido a Diactive",
+      "description": "¡Transforma tus pasos diarios en puntos y marca la diferencia!"
+    },
+    "dailyValidation": {
+      "title": "Validación Diaria",
+      "description": "No olvides validar tus pasos cada día antes de medianoche o los perderás."
+    },
+    "rewards": {
+      "title": "Canjea tus Puntos",
+      "description": "Usa tus puntos para obtener recompensas o hacer donaciones a organizaciones."
+    }
+  },
+  "home": {
+    "todaySteps": "Tus pasos hoy",
+    "steps": "{{count}} pasos",
+    "validateSteps": "Validar mis pasos",
+    "stepsValidated": "Pasos validados ✓",
+    "warning": "¡No olvides validar tus pasos antes de medianoche o los perderás!"
+  },
+  "settings": {
+    "language": {
+      "title": "Idioma",
+      "select": "Seleccionar idioma"
+    }
+  }
+}

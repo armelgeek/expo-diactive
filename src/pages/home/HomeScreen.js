@@ -1,11 +1,14 @@
 import React from 'react'
-import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native'
+import { View, StyleSheet, ScrollView, RefreshControl, Modal } from 'react-native'
 import { Button, Card, Text, ProgressBar, IconButton, Menu } from 'react-native-paper'
+import { useTranslation } from 'react-i18next'
 import { useSteps } from '../../hooks/useSteps'
 import { useOnboarding } from '../../hooks/useOnboarding'
 import { OnboardingModal } from '../../molecules/OnboardingModal'
+import { LanguageSelector } from '../../molecules/LanguageSelector'
 
 export default function HomeScreen() {
+  const { t } = useTranslation()
   const {
     loading,
     steps,
@@ -24,6 +27,7 @@ export default function HomeScreen() {
   } = useOnboarding()
 
   const [menuVisible, setMenuVisible] = React.useState(false)
+  const [showLanguageSelector, setShowLanguageSelector] = React.useState(false)
 
   const handleValidation = async () => {
     try {
@@ -40,7 +44,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text variant="headlineMedium">Accueil</Text>
+        <Text variant="headlineMedium">{t('common.home')}</Text>
         <Menu
           visible={menuVisible}
           onDismiss={() => setMenuVisible(false)}
@@ -56,8 +60,16 @@ export default function HomeScreen() {
               setMenuVisible(false)
               showOnboardingManually()
             }}
-            title="Voir le tutoriel"
+            title={t('common.tutorial')}
             leadingIcon="help-circle"
+          />
+          <Menu.Item
+            onPress={() => {
+              setMenuVisible(false)
+              setShowLanguageSelector(true)
+            }}
+            title={t('settings.language.title')}
+            leadingIcon="translate"
           />
         </Menu>
       </View>
@@ -70,11 +82,15 @@ export default function HomeScreen() {
       >
         <Card style={styles.card}>
           <Card.Content>
-            <Text variant="titleLarge" style={styles.title}>Vos pas aujourd'hui</Text>
+            <Text variant="titleLarge" style={styles.title}>
+              {t('home.todaySteps')}
+            </Text>
 
             <View style={styles.statsContainer}>
               <Text variant="headlineMedium">{steps.toLocaleString()}</Text>
-              <Text variant="bodyMedium">/ {dailyGoal.toLocaleString()} pas</Text>
+              <Text variant="bodyMedium">
+                / {t('home.steps', { count: dailyGoal.toLocaleString() })}
+              </Text>
             </View>
 
             <ProgressBar
@@ -83,7 +99,9 @@ export default function HomeScreen() {
             />
 
             <View style={styles.pointsContainer}>
-              <Text variant="bodyLarge">Points disponibles : {points}</Text>
+              <Text variant="bodyLarge">
+                {t('common.points', { count: points })}
+              </Text>
             </View>
 
             <Button
@@ -92,12 +110,12 @@ export default function HomeScreen() {
               disabled={isValidated || steps === 0}
               style={styles.validateButton}
             >
-              {isValidated ? 'Pas validés ✓' : 'Valider mes pas'}
+              {isValidated ? t('home.stepsValidated') : t('home.validateSteps')}
             </Button>
 
             {!isValidated && steps > 0 && (
               <Text variant="bodySmall" style={styles.warning}>
-                N'oubliez pas de valider vos pas avant minuit pour ne pas les perdre !
+                {t('home.warning')}
               </Text>
             )}
           </Card.Content>
@@ -109,6 +127,14 @@ export default function HomeScreen() {
         onDismiss={handleDismiss}
         onPostpone={handlePostpone}
       />
+
+      <Modal
+        visible={showLanguageSelector}
+        onDismiss={() => setShowLanguageSelector(false)}
+        contentContainerStyle={styles.languageModal}
+      >
+        <LanguageSelector />
+      </Modal>
     </View>
   )
 }
@@ -156,4 +182,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
+  languageModal: {
+    backgroundColor: 'white',
+    margin: 20,
+    borderRadius: 8,
+    padding: 0,
+  }
 })
