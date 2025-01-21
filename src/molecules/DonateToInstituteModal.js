@@ -2,8 +2,9 @@ import React, { useState } from 'react'
 import { View,Modal, StyleSheet } from 'react-native'
 import { Text, Button, Input } from 'react-native-elements'
 import { useSteps } from '../hooks/useSteps'
-import { supabase } from '../services/supabase'
+import { user as userService } from '../services/api/user'
 import { CustomOverlay } from './CustomOverlay'
+import { donationService } from '../services/api/donation'
 
 const DonateToInstituteModal = ({
   isVisible,
@@ -26,7 +27,9 @@ const DonateToInstituteModal = ({
     }
 
     setLoading(true)
+
     const user = await userService.getUser();
+    console.log('icii',user);
     try {
       const pointsValue = parseInt(points)
       if (isNaN(pointsValue) || pointsValue <= 0) {
@@ -62,18 +65,18 @@ const DonateToInstituteModal = ({
         <View style={styles.progressContainer}>
           <View style={styles.progressInfo}>
             <Text>Objectif : {institute?.points_goal?.toLocaleString()} points</Text>
-            <Text>Actuel : {institute?.total_donations?.toLocaleString()} points</Text>
+            <Text>Actuel : {institute?.current_points?.toLocaleString()} points</Text>
           </View>
           <View style={styles.progressBarContainer}>
             <View
               style={[
                 styles.progressBar,
-                { width: `${Math.min((institute?.total_donations / institute?.points_goal) * 100, 100)}%` }
+                { width: `${Math.min((institute?.current_points / institute?.points_goal) * 100, 100)}%` }
               ]}
             />
           </View>
           <Text style={styles.remainingPoints}>
-            Reste à atteindre : {(institute?.points_goal - institute?.total_donations)?.toLocaleString()} points
+            Reste à atteindre : {(institute?.points_goal - institute?.current_points)?.toLocaleString()} points
           </Text>
         </View>
 

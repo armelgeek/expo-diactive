@@ -9,6 +9,7 @@ export const institutes = {
         .eq('archive', false)
         .order('name')
 
+
       if (error) throw error
 
       return data?.map(sos => ({
@@ -35,7 +36,6 @@ export const institutes = {
           sos_diactive_plus(name, point_objective, points)
         `)
         .eq('sender_id', userId)
-        .eq('archive', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -75,6 +75,7 @@ export const institutes = {
           sos_diactive_plus_id: instituteId,
           sender_id: userId,
           point: points,
+          created_at: new Date()
         })
 
       if (donationError) throw donationError

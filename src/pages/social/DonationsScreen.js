@@ -2,79 +2,32 @@ import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native'
 import { Text, Card, Divider } from 'react-native-paper'
 import { supabase } from '../../services/supabase'
+import { useInstitutes } from '../../hooks/useInstitutes'
 
 export const DonationsScreen = () => {
-  const [donations, setDonations] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-
-  const fetchDonations = async () => {
-    try {
-      setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data, error } = await supabase
-        .from('donations')
-        .select(`
-          id,
-          points_amount,
-          created_at,
-          institute:institutes (
-            name,
-            logo_url
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setDonations(data || [])
-    const mappedDonations = data.map(donation => ({
-      ...donation,
-      amount: donation.points_amount,
-      image_url: donation.institute.logo_url
-    }))
-    setDonations(mappedDonations)
-    } catch (err) {
-      console.error('Error fetching donations:', err)
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchDonations()
-  }, [])
-
+  const { loading,donations, refreshDonations }  = useInstitutes();
+  console.log('donations',donations);
   return (
     <ScrollView
       style={styles.container}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={fetchDonations} />
+        <RefreshControl refreshing={loading} onRefresh={refreshDonations} />
       }
     >
-      {error && (
-        <Text style={styles.error}>{error}</Text>
-      )}
-
       <Card style={styles.card}>
         <Card.Title title="Historique des dons" />
         <Card.Content>
           {donations.map((donation, index) => (
             <React.Fragment key={donation.id}>
               <View style={styles.donationItem}>
-                <View>
                   <Text variant="titleMedium">
                     {donation.institute.name}
                   </Text>
                   <Text variant="bodyMedium" style={styles.date}>
                     {new Date(donation.created_at).toLocaleDateString()}
                   </Text>
-                </View>
                 <Text variant="titleMedium" style={styles.amount}>
-                  {donation.amount} points
+                  {donation.points_amount} points
                 </Text>
               </View>
               {index < donations.length - 1 && <Divider style={styles.divider} />}
@@ -126,4 +79,4 @@ const styles = StyleSheet.create({
     margin: 16,
     textAlign: 'center',
   },
-}) 
+})

@@ -2,46 +2,22 @@ import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native'
 import { Text, Card, Button, Surface, Avatar } from 'react-native-paper'
 import { supabase } from '../../services/supabase'
-import DonateInstituteModal  from '../../molecules/DonateToInstituteModal'
+import DonateInstituteModal from '../../molecules/DonateToInstituteModal'
+import { institutes } from '../../services/api/institutes'
 
 export const InstitutesScreen = () => {
-  const [institutes, setInstitutes] = useState([])
+  const [institutesList, setInstitutesList] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [selectedInstitute, setSelectedInstitute] = useState(null)
   const [showDonateModal, setShowDonateModal] = useState(false)
-
   const fetchInstitutes = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const { data, error } = await supabase
-        .from('institutes')
-        .select(`
-          id,
-          name,
-          description,
-          logo_url,
-          current_points,
-          points_goal,
-          donations (
-            id,
-            points_amount,
-            created_at
-          )
-        `)
-        .order('name')
-
-      if (error) throw error
-
-      const mappedInstitutes = data.map(institute => ({
-        ...institute,
-        image_url: institute.logo_url,
-        total_donations: institute.donations.reduce((total, donation) => total + donation.points_amount, 0),
-        points_goal: institute.points_goal
-      }))
-      setInstitutes(mappedInstitutes)
+      const data = await institutes.fetchInstitutes();
+      setInstitutesList(data);
     } catch (err) {
       console.error('Error fetching institutes:', err)
       setError(err.message)
@@ -77,7 +53,7 @@ export const InstitutesScreen = () => {
           <Text style={styles.error}>{error}</Text>
         )}
 
-        {institutes.map(institute => (
+        {institutesList.map(institute => (
           <Card key={institute.id} style={styles.card}>
             <Card.Content>
               <View style={styles.header}>
@@ -102,17 +78,17 @@ export const InstitutesScreen = () => {
 
               <View style={styles.progressInfo}>
                 <Text>Objectif : {institute?.points_goal?.toLocaleString()} points</Text>
-                <Text>Actuel : {institute?.total_donations?.toLocaleString()} points</Text>
+                <Text>Actuel : {institute?.current_points?.toLocaleString()} points</Text>
               </View>
 
               <View style={styles.progressBarContainer}>
-            <View 
-              style={[
-                styles.progressBar, 
-                { width: `${Math.min((institute?.total_donations / institute?.points_goal) * 100, 100)}%` }
-              ]} 
-            />
-          </View>
+                <View
+                  style={[
+                    styles.progressBar,
+                    { width: `${Math.min((institute?.current_points / institute?.points_goal) * 100, 100)}%` }
+                  ]}
+                />
+              </View>
               <Button
                 mode="contained"
                 onPress={() => handleDonatePress(institute)}
@@ -131,7 +107,7 @@ export const InstitutesScreen = () => {
         institute={selectedInstitute}
         maxPoints={selectedInstitute?.points_goal || 0}
       />
-    
+
     </View>
   )
 }
@@ -187,4 +163,4 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#2089dc',
   },
-}) 
+})

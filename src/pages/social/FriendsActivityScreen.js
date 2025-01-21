@@ -19,7 +19,7 @@ export default function FriendsActivityScreen() {
       setLoading(true)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-
+      console.log('user', user);
       const allFriendships = await friendsService.getAllFriendships(user.id)
       setFriendships(allFriendships)
     } catch (err) {

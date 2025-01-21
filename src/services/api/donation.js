@@ -3,6 +3,7 @@ import { supabase } from '../supabase'
 export const donationService = {
   async makeDonation(instituteId, userId, points) {
     try {
+      console.log('va syyyy',instituteId,'userId', userId,'points', points);
       const { data: institute, error: sosError } = await supabase
         .from('sos_diactive_plus')
         .select('point_objective, points')

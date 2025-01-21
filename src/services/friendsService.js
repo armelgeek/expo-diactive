@@ -187,6 +187,7 @@ export const friendsService = {
 	// Get all friendships
 	getAllFriendships: async (userId) => {
 		// Get all contacts (sent and received)
+		console.log('userId',userId);
 		const { data: sentContacts, error: sentError } = await supabase
 			.from('contacts')
 			.select('contact_id, status')
@@ -198,7 +199,7 @@ export const friendsService = {
 			.from('contacts')
 			.select('user_id, status')
 			.eq('contact_id', userId)
-
+			console.log('profiles',receivedContacts);
 		if (receivedError) throw receivedError
 
 		// Get unique user IDs from both sent and received contacts
@@ -215,7 +216,7 @@ export const friendsService = {
 			.select('user_id, user_name, first_name, last_name, avatar_url')
 			.in('user_id', friendIds)
 
-		console.log('profiles',friendIds);
+
 		if (profilesError) throw profilesError
 
 		// Combine the data
