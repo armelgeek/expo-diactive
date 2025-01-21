@@ -133,7 +133,7 @@ export default function HomeScreen() {
         onDismiss={() => setShowLanguageSelector(false)}
         contentContainerStyle={styles.languageModal}
       >
-        <LanguageSelector />
+        <LanguageSelector onClose={() => setShowLanguageSelector(false)} />
       </Modal>
     </View>
   )
