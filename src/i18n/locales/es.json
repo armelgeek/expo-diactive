@@ -10,31 +10,53 @@
     "tutorial": "Ver tutorial",
     "points": "Puntos disponibles: {{count}}"
   },
-  "onboarding": {
-    "welcome": {
-      "title": "Bienvenido a Diactive",
-      "description": "¡Transforma tus pasos diarios en puntos y marca la diferencia!"
-    },
-    "dailyValidation": {
-      "title": "Validación Diaria",
-      "description": "No olvides validar tus pasos cada día antes de medianoche o los perderás."
-    },
-    "rewards": {
-      "title": "Canjea tus Puntos",
-      "description": "Usa tus puntos para obtener recompensas o hacer donaciones a organizaciones."
-    }
+  "period": {
+    "day": "Día",
+    "week": "Semana",
+    "month": "Mes"
   },
   "home": {
     "todaySteps": "Tus pasos hoy",
     "steps": "{{count}} pasos",
+    "stepsLabel": "Pasos dados",
     "validateSteps": "Validar mis pasos",
     "stepsValidated": "Pasos validados ✓",
-    "warning": "¡No olvides validar tus pasos antes de medianoche o los perderás!"
+    "warning": "¡No olvides validar tus pasos antes de medianoche para no perderlos!",
+    "validationInstruction": "Haz clic en el botón de abajo para validar tus pasos"
+  },
+  "stats": {
+    "distance": "Distancia",
+    "calories": "Calorías",
+    "diamonds": "Diamantes",
+    "validatedSteps": "Pasos validados"
   },
   "settings": {
     "language": {
       "title": "Idioma",
       "select": "Seleccionar idioma"
+    }
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "markAllRead": "Marcar todo como leído",
+    "empty": "Sin notificaciones",
+    "types": {
+      "steps_validated": {
+        "title": "Pasos validados",
+        "message": "¡Tus {{count}} pasos han sido validados con éxito!"
+      },
+      "points_earned": {
+        "title": "Puntos ganados",
+        "message": "¡Has ganado {{count}} puntos!"
+      },
+      "reward_available": {
+        "title": "Nueva recompensa",
+        "message": "¡Hay una nueva recompensa disponible!"
+      },
+      "goal_reached": {
+        "title": "Objetivo alcanzado",
+        "message": "¡Felicitaciones! ¡Has alcanzado tu objetivo de {{count}} pasos!"
+      }
     }
   }
 }

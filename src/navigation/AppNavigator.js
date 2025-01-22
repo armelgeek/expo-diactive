@@ -31,6 +31,7 @@ import { DonationsScreen } from '../pages/social/DonationsScreen'
 import { PartnerOrdersScreen } from '../pages/partner/PartnerOrdersScreen'
 import { QRCodeScreen } from '../pages/orders/QRCodeScreen'
 import ScanQRScreen from '../pages/partner/ScanQRScreen'
+import { HomeHeader } from '../molecules/HomeHeader'
 
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
@@ -191,10 +192,11 @@ export default function AppNavigator() {
             />
           )
         },
+
         tabBarActiveTintColor: '#2089dc',
         tabBarInactiveTintColor: 'gray',
         header: ({ route, options }) => (
-          <Header title={options.title || route.name} />
+          <HomeHeader title={options.title || route.name} />
         ),
       })}
     >

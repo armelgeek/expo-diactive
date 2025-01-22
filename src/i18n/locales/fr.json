@@ -10,26 +10,25 @@
     "tutorial": "Voir le tutoriel",
     "points": "Points disponibles : {{count}}"
   },
-  "onboarding": {
-    "welcome": {
-      "title": "Bienvenue sur Diactive",
-      "description": "Transformez vos pas quotidiens en points et faites la différence !"
-    },
-    "dailyValidation": {
-      "title": "Validation Quotidienne",
-      "description": "N'oubliez pas de valider vos pas chaque jour avant minuit pour ne pas les perdre."
-    },
-    "rewards": {
-      "title": "Échangez vos Points",
-      "description": "Utilisez vos points pour obtenir des récompenses ou faire des dons à des associations."
-    }
+  "period": {
+    "day": "Jour",
+    "week": "Semaine",
+    "month": "Mois"
   },
   "home": {
     "todaySteps": "Vos pas aujourd'hui",
     "steps": "{{count}} pas",
+    "stepsLabel": "Pas effectués",
     "validateSteps": "Valider mes pas",
     "stepsValidated": "Pas validés ✓",
-    "warning": "N'oubliez pas de valider vos pas avant minuit pour ne pas les perdre !"
+    "warning": "N'oubliez pas de valider vos pas avant minuit pour ne pas les perdre !",
+    "validationInstruction": "Cliquez sur le bouton ci-dessous pour valider vos pas"
+  },
+  "stats": {
+    "distance": "Distance",
+    "calories": "Calories",
+    "diamonds": "Diamants",
+    "validatedSteps": "Pas validés"
   },
   "settings": {
     "language": {

@@ -10,31 +10,53 @@
     "tutorial": "View tutorial",
     "points": "Available points: {{count}}"
   },
-  "onboarding": {
-    "welcome": {
-      "title": "Welcome to Diactive",
-      "description": "Transform your daily steps into points and make a difference!"
-    },
-    "dailyValidation": {
-      "title": "Daily Validation",
-      "description": "Don't forget to validate your steps each day before midnight or you'll lose them."
-    },
-    "rewards": {
-      "title": "Exchange Your Points",
-      "description": "Use your points to get rewards or make donations to organizations."
-    }
+  "period": {
+    "day": "Day",
+    "week": "Week",
+    "month": "Month"
   },
   "home": {
     "todaySteps": "Your steps today",
     "steps": "{{count}} steps",
+    "stepsLabel": "Steps taken",
     "validateSteps": "Validate my steps",
     "stepsValidated": "Steps validated ✓",
-    "warning": "Don't forget to validate your steps before midnight or you'll lose them!"
+    "warning": "Don't forget to validate your steps before midnight to avoid losing them!",
+    "validationInstruction": "Click the button below to validate your steps"
+  },
+  "stats": {
+    "distance": "Distance",
+    "calories": "Calories",
+    "diamonds": "Diamonds",
+    "validatedSteps": "Validated steps"
   },
   "settings": {
     "language": {
       "title": "Language",
       "select": "Select a language"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "empty": "No notifications",
+    "types": {
+      "steps_validated": {
+        "title": "Steps validated",
+        "message": "Your {{count}} steps have been successfully validated!"
+      },
+      "points_earned": {
+        "title": "Points earned",
+        "message": "You earned {{count}} points!"
+      },
+      "reward_available": {
+        "title": "New reward",
+        "message": "A new reward is available!"
+      },
+      "goal_reached": {
+        "title": "Goal reached",
+        "message": "Congratulations! You've reached your goal of {{count}} steps!"
+      }
     }
   }
 }
