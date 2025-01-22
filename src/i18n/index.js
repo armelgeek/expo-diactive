@@ -1,4 +1,4 @@
-import i18n from 'i18next'
+import i18next from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as Localization from 'expo-localization'
@@ -13,7 +13,7 @@ const LANGUAGES = {
 	es: { name: 'Español', translation: es }
 }
 
-const LANGUAGE_DETECTOR = {
+const languageDetector = {
 	type: 'languageDetector',
 	async: true,
 	detect: async (callback) => {
@@ -42,17 +42,25 @@ const LANGUAGE_DETECTOR = {
 	}
 }
 
+const i18n = i18next.createInstance()
+
 i18n
-	.use(LANGUAGE_DETECTOR)
+	.use(languageDetector)
 	.use(initReactI18next)
-	.init({
+
+export const initI18n = () => {
+	return i18n.init({
 		compatibilityJSON: 'v3',
 		resources: LANGUAGES,
 		fallbackLng: 'en',
 		interpolation: {
 			escapeValue: false
+		},
+		react: {
+			useSuspense: false // This is important for async loading
 		}
 	})
+}
 
 export const getAvailableLanguages = () => {
 	return Object.entries(LANGUAGES).map(([code, { name }]) => ({

@@ -1,11 +1,10 @@
 import React from 'react'
-import { View, StyleSheet, ScrollView, RefreshControl, Modal } from 'react-native'
-import { Button, Card, Text, ProgressBar, IconButton, Menu } from 'react-native-paper'
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native'
+import { Button, Card, Text, ProgressBar } from 'react-native-paper'
 import { useTranslation } from 'react-i18next'
 import { useSteps } from '../../hooks/useSteps'
 import { useOnboarding } from '../../hooks/useOnboarding'
 import { OnboardingModal } from '../../molecules/OnboardingModal'
-import { LanguageSelector } from '../../molecules/LanguageSelector'
 
 export default function HomeScreen() {
   const { t } = useTranslation()
@@ -22,18 +21,13 @@ export default function HomeScreen() {
   const {
     showOnboarding,
     handleDismiss,
-    handlePostpone,
-    showOnboardingManually
+    handlePostpone
   } = useOnboarding()
-
-  const [menuVisible, setMenuVisible] = React.useState(false)
-  const [showLanguageSelector, setShowLanguageSelector] = React.useState(false)
 
   const handleValidation = async () => {
     try {
       await validateDailySteps()
     } catch (error) {
-      // L'erreur est déjà loguée dans le hook
       alert(error.message)
     }
   }
@@ -43,39 +37,8 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text variant="headlineMedium">{t('common.home')}</Text>
-        <Menu
-          visible={menuVisible}
-          onDismiss={() => setMenuVisible(false)}
-          anchor={
-            <IconButton
-              icon="dots-vertical"
-              onPress={() => setMenuVisible(true)}
-            />
-          }
-        >
-          <Menu.Item
-            onPress={() => {
-              setMenuVisible(false)
-              showOnboardingManually()
-            }}
-            title={t('common.tutorial')}
-            leadingIcon="help-circle"
-          />
-          <Menu.Item
-            onPress={() => {
-              setMenuVisible(false)
-              setShowLanguageSelector(true)
-            }}
-            title={t('settings.language.title')}
-            leadingIcon="translate"
-          />
-        </Menu>
-      </View>
-
       <ScrollView
-        style={styles.container}
+        style={styles.scrollView}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={refreshData} />
         }
@@ -127,14 +90,6 @@ export default function HomeScreen() {
         onDismiss={handleDismiss}
         onPostpone={handlePostpone}
       />
-
-      <Modal
-        visible={showLanguageSelector}
-        onDismiss={() => setShowLanguageSelector(false)}
-        contentContainerStyle={styles.languageModal}
-      >
-        <LanguageSelector onClose={() => setShowLanguageSelector(false)} />
-      </Modal>
     </View>
   )
 }
@@ -144,12 +99,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
+  scrollView: {
+    flex: 1,
   },
   card: {
     margin: 16,
@@ -182,10 +133,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
-  languageModal: {
-    backgroundColor: 'white',
-    margin: 20,
-    borderRadius: 8,
-    padding: 0,
-  }
 })
