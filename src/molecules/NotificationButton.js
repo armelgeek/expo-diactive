@@ -1,18 +1,19 @@
 import React from 'react'
 import { TouchableOpacity, StyleSheet } from 'react-native'
-import { Badge, useTheme } from 'react-native-paper'
+import { Badge } from 'react-native-paper'
 import { Icon } from 'react-native-elements'
 import { useNotifications } from '../hooks/useNotifications'
 import { useNavigation } from '@react-navigation/native'
+import { useTheme } from '../context/ThemeContext'
 
 export const NotificationButton = () => {
 	const { unreadCount } = useNotifications()
 	const navigation = useNavigation()
-	const theme = useTheme()
+	const { theme, isDarkMode, setTheme } = useTheme()
 
 	return (
 		<TouchableOpacity
-			style={styles.container}
+			style={[styles.container, { backgroundColor: theme.colors.surface }]}
 			onPress={() => navigation.navigate('Notifications')}
 		>
 			<Icon
@@ -38,6 +39,7 @@ const styles = StyleSheet.create({
 		padding: 8,
 		marginRight: 8,
 		position: 'relative',
+		borderRadius: 20,
 	},
 	badge: {
 		position: 'absolute',

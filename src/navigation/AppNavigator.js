@@ -2,6 +2,7 @@ import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { Icon } from 'react-native-elements'
+import { HeaderButtons } from '../molecules/HeaderButtons'
 import { NotificationButton } from '../molecules/NotificationButton'
 import { NotificationsScreen } from '../pages/notifications/NotificationsScreen'
 
@@ -192,7 +193,7 @@ export default function AppNavigator() {
         },
         tabBarActiveTintColor: '#2089dc',
         tabBarInactiveTintColor: 'gray',
-        headerRight: () => <NotificationButton />
+        headerRight: () => <HeaderButtons />
       })}
     >
       <Tab.Screen
