@@ -192,6 +192,7 @@ export default function AppNavigator() {
         },
         tabBarActiveTintColor: '#2089dc',
         tabBarInactiveTintColor: 'gray',
+        headerRight: () => <NotificationButton />
       })}
     >
       <Tab.Screen

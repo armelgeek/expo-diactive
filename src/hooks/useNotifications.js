@@ -8,12 +8,27 @@ export const useNotifications = () => {
 	const [loading, setLoading] = useState(true)
 	const [hasMore, setHasMore] = useState(true)
 	const [offset, setOffset] = useState(0)
+	const [user, setUser] = useState(null)
 	const limit = 20
 
+	// Fetch user once when the hook is initialized
+	useEffect(() => {
+		const initUser = async () => {
+			try {
+				const userData = await userService.getUser()
+				setUser(userData)
+			} catch (error) {
+				console.error('Error fetching user:', error)
+			}
+		}
+		initUser()
+	}, [])
+
 	const fetchNotifications = useCallback(async (reset = false) => {
+		if (!user) return
+
 		try {
 			setLoading(true)
-			const user = await userService.getUser()
 			const newOffset = reset ? 0 : offset
 
 			const { notifications: newNotifications, total } =
@@ -35,19 +50,23 @@ export const useNotifications = () => {
 		} finally {
 			setLoading(false)
 		}
-	}, [offset])
+	}, [offset, user])
 
 	const fetchUnreadCount = useCallback(async () => {
+		if (!user) return
+
 		try {
-			const user = await userService.getUser()
 			const count = await notificationService.getUnreadCount(user.id)
 			setUnreadCount(count)
 		} catch (error) {
 			console.error('Error in useNotifications.fetchUnreadCount:', error)
+			setUnreadCount(0)
 		}
-	}, [])
+	}, [user])
 
 	const markAsRead = useCallback(async (notificationId) => {
+		if (!user) return
+
 		try {
 			await notificationService.markAsRead(notificationId)
 			setNotifications(prev =>
@@ -61,11 +80,12 @@ export const useNotifications = () => {
 		} catch (error) {
 			console.error('Error in useNotifications.markAsRead:', error)
 		}
-	}, [fetchUnreadCount])
+	}, [fetchUnreadCount, user])
 
 	const markAllAsRead = useCallback(async () => {
+		if (!user) return
+
 		try {
-			const user = await userService.getUser()
 			await notificationService.markAllAsRead(user.id)
 			setNotifications(prev =>
 				prev.map(notif => ({
@@ -77,9 +97,11 @@ export const useNotifications = () => {
 		} catch (error) {
 			console.error('Error in useNotifications.markAllAsRead:', error)
 		}
-	}, [])
+	}, [user])
 
 	const archiveNotification = useCallback(async (notificationId) => {
+		if (!user) return
+
 		try {
 			await notificationService.archiveNotification(notificationId)
 			setNotifications(prev =>
@@ -89,33 +111,42 @@ export const useNotifications = () => {
 		} catch (error) {
 			console.error('Error in useNotifications.archiveNotification:', error)
 		}
-	}, [fetchUnreadCount])
+	}, [fetchUnreadCount, user])
 
 	const refresh = useCallback(async () => {
+		if (!user) return
+
 		setOffset(0)
 		await Promise.all([
 			fetchNotifications(true),
 			fetchUnreadCount()
 		])
-	}, [fetchNotifications, fetchUnreadCount])
+	}, [fetchNotifications, fetchUnreadCount, user])
 
+	// Effect to initialize notifications when user is loaded
 	useEffect(() => {
-		refresh()
+		if (user) {
+			refresh()
+		}
+	}, [refresh, user])
 
-		// Souscrire aux nouvelles notifications
-		const unsubscribe = userService.getUser().then(user => {
-			return notificationService.subscribeToNewNotifications(
-				user.id,
-				async () => {
-					await refresh()
-				}
-			)
-		})
+	// Effect to subscribe to new notifications when user is loaded
+	useEffect(() => {
+		if (!user) return
+
+		const unsubscribe = notificationService.subscribeToNewNotifications(
+			user.id,
+			async () => {
+				await refresh()
+			}
+		)
 
 		return () => {
-			unsubscribe.then(unsub => unsub())
+			if (typeof unsubscribe === 'function') {
+				unsubscribe()
+			}
 		}
-	}, [refresh])
+	}, [refresh, user])
 
 	return {
 		notifications,

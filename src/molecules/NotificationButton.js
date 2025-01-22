@@ -24,7 +24,7 @@ export const NotificationButton = () => {
 			{unreadCount > 0 && (
 				<Badge
 					size={16}
-					style={[styles.badge, { backgroundColor: theme.colors.notification }]}
+					style={[styles.badge, { backgroundColor: theme.colors.error }]}
 				>
 					{unreadCount > 99 ? '99+' : unreadCount}
 				</Badge>
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
 	},
 	badge: {
 		position: 'absolute',
-		top: 2,
-		right: 2,
+		top: 0,
+		right: 0,
 	},
 })

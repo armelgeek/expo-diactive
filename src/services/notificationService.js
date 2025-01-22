@@ -24,18 +24,26 @@ export const notificationService = {
 
 	async getUnreadCount(userId) {
 		try {
+			if (!userId) {
+				console.warn('getUnreadCount called without userId')
+				return 0
+			}
+
 			const { count, error } = await supabase
 				.from('notifications')
 				.select('*', { count: 'exact', head: true })
 				.eq('user_id', userId)
-				.eq('archive', false)
 				.is('read_at', null)
 
-			if (error) throw error
+			if (error) {
+				console.error('Supabase error in getUnreadCount:', error)
+				throw error
+			}
+
 			return count || 0
 		} catch (error) {
 			console.error('Error getting unread count:', error)
-			throw error
+			return 0 // Return 0 instead of throwing to avoid breaking the UI
 		}
 	},
 
