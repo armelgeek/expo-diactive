@@ -1,12 +1,16 @@
 import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import { FloatingTabBar } from '../molecules/FloatingTabBar'
-import { HomeHeader } from '../molecules/HomeHeader'
+import { Icon } from 'react-native-elements'
+import { Header } from '../molecules/Header'
+import { NotificationButton } from '../molecules/NotificationButton'
+import { NotificationsScreen } from '../pages/notifications/NotificationsScreen'
 
 // Screens
 import HomeScreen from '../pages/home/HomeScreen'
+import DashboardScreen from '../pages/dashboard/DashboardScreen'
 import { RewardsScreen } from '../pages/rewards/RewardsScreen'
+import { DealsScreen } from '../pages/deals/DealsScreen'
 import SocialScreen from '../pages/social/SocialScreen'
 import { MarketplaceScreen } from '../pages/marketplace/MarketplaceScreen'
 import { PartnerDetailsScreen } from '../pages/marketplace/PartnerDetailsScreen'
@@ -27,13 +31,13 @@ import { DonationsScreen } from '../pages/social/DonationsScreen'
 import { PartnerOrdersScreen } from '../pages/partner/PartnerOrdersScreen'
 import { QRCodeScreen } from '../pages/orders/QRCodeScreen'
 import ScanQRScreen from '../pages/partner/ScanQRScreen'
-import { NotificationsScreen } from '../pages/notifications/NotificationsScreen'
+import { HomeHeader } from '../molecules/HomeHeader'
 
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
 
 const MarketplaceStack = () => (
-  <Stack.Navigator>
+  <Stack.Navigator initialRouteName='MarketplaceMain'>
     <Stack.Screen
       name="MarketplaceMain"
       component={MarketplaceScreen}
@@ -62,7 +66,10 @@ const ProfileStack = () => (
     <Stack.Screen
       name="ProfileMain"
       component={ProfileScreen}
-      options={{ title: 'Profil' }}
+      options={{
+        title: 'Profil',
+        headerRight: () => <NotificationButton />
+      }}
     />
     <Stack.Screen
       name="CreatePartner"
@@ -79,6 +86,7 @@ const ProfileStack = () => (
       component={ManageRewards}
       options={{ title: 'Gérer les récompenses' }}
     />
+
     <Stack.Screen
       name="Orders"
       component={OrdersScreen}
@@ -145,11 +153,52 @@ const ProfileStack = () => (
 export default function AppNavigator() {
   return (
     <Tab.Navigator
-      tabBar={props => <FloatingTabBar {...props} />}
-      screenOptions={{
-        header: () => <HomeHeader />,
-        tabBarShowLabel: false,
-      }}
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName
+
+          switch (route.name) {
+            case 'Dashboard':
+              iconName = 'home'
+              break
+            case 'Rewards':
+              iconName = 'star'
+              break
+            case 'Social':
+              iconName = 'people'
+              break
+            case 'Marketplace':
+              iconName = 'store'
+              break
+            case 'Profile':
+              iconName = 'person'
+              break
+            case 'Deals':
+              iconName = 'tag'
+              break
+            case 'Cart':
+              iconName = 'circle'
+              break
+            default:
+              iconName = 'circle'
+          }
+
+          return (
+            <Icon
+              name={iconName}
+              type="material"
+              size={size}
+              color={color}
+            />
+          )
+        },
+
+        tabBarActiveTintColor: '#2089dc',
+        tabBarInactiveTintColor: 'gray',
+        header: ({ route, options }) => (
+          <HomeHeader title={options.title || route.name} />
+        ),
+      })}
     >
       <Tab.Screen
         name="Dashboard"
@@ -157,14 +206,14 @@ export default function AppNavigator() {
         options={{ title: 'Accueil' }}
       />
       <Tab.Screen
-        name="Social"
-        component={SocialScreen}
-        options={{ title: 'Social' }}
-      />
-      <Tab.Screen
         name="Rewards"
         component={RewardsScreen}
         options={{ title: 'Récompenses' }}
+      />
+      <Tab.Screen
+        name="Social"
+        component={SocialScreen}
+        options={{ title: 'Social' }}
       />
       <Tab.Screen
         name="Marketplace"
@@ -175,6 +224,11 @@ export default function AppNavigator() {
         name="Profile"
         component={ProfileStack}
         options={{ headerShown: false }}
+      />
+      <Tab.Screen
+        name="Cart"
+        component={CartScreen}
+        options={{ title: 'Mon Panier' }}
       />
     </Tab.Navigator>
   )
