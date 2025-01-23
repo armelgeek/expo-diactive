@@ -28,6 +28,7 @@ import { PartnerOrdersScreen } from '../pages/partner/PartnerOrdersScreen'
 import { QRCodeScreen } from '../pages/orders/QRCodeScreen'
 import ScanQRScreen from '../pages/partner/ScanQRScreen'
 import { NotificationsScreen } from '../pages/notifications/NotificationsScreen'
+import { ChallengesScreen } from '../pages/challenges/ChallengesScreen'
 
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
@@ -138,6 +139,14 @@ const ProfileStack = () => (
       name="Notifications"
       component={NotificationsScreen}
       options={{ title: 'Notifications' }}
+    />
+    <Stack.Screen
+      name="Challenges"
+      component={ChallengesScreen}
+      options={{
+        title: 'Challenges',
+        headerShown: true,
+      }}
     />
   </Stack.Navigator>
 )

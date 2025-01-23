@@ -4,64 +4,64 @@ import { Icon } from 'react-native-elements'
 import { useTheme } from '../context/ThemeContext'
 import { useNavigation } from '@react-navigation/native'
 
-export const FloatingTabBar = ({ state, descriptors }) => {
-	const { theme } = useTheme()
-	const navigation = useNavigation()
+export const FloatingTabBar = ({ state, descriptors, navigation }) => {
+  const { theme } = useTheme()
 
-	return (
-		<View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-			<View style={[styles.tabBar, { backgroundColor: theme.colors.surface }]}>
-				<TouchableOpacity
-					style={styles.tabItem}
-					onPress={() => navigation.navigate('Dashboard')}
-				>
-					<Icon
-						name="directions-walk"
-						type="material"
-						size={24}
-						color={state.index === 0 ? theme.colors.primary : theme.colors.text}
-					/>
-				</TouchableOpacity>
+  return (
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.tabBar, { backgroundColor: theme.colors.surface }]}>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => navigation.jumpTo('Dashboard')}
+        >
+          <Icon
+            name="directions-walk"
+            type="material"
+            size={24}
+            color={state.index === 0 ? theme.colors.primary : theme.colors.text}
+          />
+        </TouchableOpacity>
 
-				<TouchableOpacity
-					style={styles.tabItem}
-					onPress={() => navigation.navigate('Social')}
-				>
-					<Icon
-						name="people"
-						type="material"
-						size={24}
-						color={state.index === 1 ? theme.colors.primary : theme.colors.text}
-					/>
-				</TouchableOpacity>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => navigation.jumpTo('Social')}
+        >
+          <Icon
+            name="people"
+            type="material"
+            size={24}
+            color={state.index === 1 ? theme.colors.primary : theme.colors.text}
+          />
+        </TouchableOpacity>
 
-				<TouchableOpacity
-					style={styles.tabItem}
-					onPress={() => navigation.navigate('Rewards')}
-				>
-					<Icon
-						name="emoji-events"
-						type="material"
-						size={24}
-						color={state.index === 2 ? theme.colors.primary : theme.colors.text}
-					/>
-				</TouchableOpacity>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => navigation.jumpTo('Rewards')}
+        >
+          <Icon
+            name="emoji-events"
+            type="material"
+            size={24}
+            color={state.index === 2 ? theme.colors.primary : theme.colors.text}
+          />
+        </TouchableOpacity>
 
-				<TouchableOpacity
-					style={styles.tabItem}
-					onPress={() => navigation.navigate('Marketplace')}
-				>
-					<Icon
-						name="store"
-						type="material"
-						size={24}
-						color={state.index === 3 ? theme.colors.primary : theme.colors.text}
-					/>
-				</TouchableOpacity>
-			</View>
-		</View>
-	)
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => navigation.jumpTo('Marketplace')}
+        >
+          <Icon
+            name="store"
+            type="material"
+            size={24}
+            color={state.index === 3 ? theme.colors.primary : theme.colors.text}
+          />
+        </TouchableOpacity>
+      </View>
+    </View>
+  )
 }
+
 
 const styles = StyleSheet.create({
 	container: {

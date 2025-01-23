@@ -110,7 +110,7 @@
 ---
 *Légende :*
 - [x] Fonctionnalité complétée
-- [ ] Fonctionnalité à développer 
+- [ ] Fonctionnalité à développer
 
 ### Pages Principales
 - [ ] Page amis/social
@@ -120,4 +120,30 @@
 + [x] Statistiques sociales (Implémenté avec SocialStatsCard)
 + [x] Recherche d'amis
 + [x] Import des contacts
-+ [x] Historique des partages 
++ [x] Historique des partages
+
+
+
+
+Gestion des Thèmes
+Nous avons le système de thème clair/sombre, mais nous pourrions ajouter des transitions plus fluides
+Potentiellement ajouter plus de personnalisation des couleurs
+Système de Notifications
+Ajouter des notifications push
+Implémenter des notifications en temps réel pour les nouveaux points gagnés
+Ajouter des notifications pour les objectifs atteints
+Gamification
+Système de badges/achievements
+Objectifs quotidiens/hebdomadaires/mensuels
+Classement entre amis
+Défis entre utilisateurs
+Social
+Système d'amis plus complet
+Partage des accomplissements sur les réseaux sociaux
+Chat ou messagerie entre utilisateurs
+Groupes d'utilisateurs/communautés
+Statistiques et Analyses
+Graphiques détaillés de progression
+Historique complet des activités
+Analyses des tendances
+Export des données

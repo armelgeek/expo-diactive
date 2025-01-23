@@ -1,14 +1,20 @@
 import React, { useState, useCallback } from 'react'
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native'
-import { Text, Card, Button, Snackbar } from 'react-native-paper'
+import { Text, Card, Button, Snackbar, SegmentedButtons } from 'react-native-paper'
 import { useRewards } from '../../hooks/useRewards'
 import { useCart } from '../../hooks/useCart'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useCartContext } from '../../contexts/CartContext'
+import { useTheme } from '../../context/ThemeContext'
+import { BadgesList } from '../../molecules/BadgesList'
+import { ChallengesList } from '../../molecules/ChallengesList'
+import { LeaderboardList } from '../../molecules/LeaderboardList'
 
 export const RewardsScreen = ({ navigation }) => {
   const { loading, rewards, fetchRewards } = useRewards()
   const { addToCart, error: cartError } = useCartContext()
+  const { theme } = useTheme()
+  const [activeTab, setActiveTab] = useState('badges')
 
   const [error, setError] = useState(null)
   const [snackbarVisible, setSnackbarVisible] = useState(false)
@@ -23,8 +29,23 @@ export const RewardsScreen = ({ navigation }) => {
       setError(err.message)
     }
   }, [addToCart])
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'badges':
+        return <BadgesList />
+      case 'challenges':
+        return <ChallengesList />
+      case 'leaderboard':
+        return <LeaderboardList />
+      default:
+        return null
+    }
+  }
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+
       <ScrollView
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={fetchRewards} />
@@ -39,6 +60,18 @@ export const RewardsScreen = ({ navigation }) => {
             {error}
           </Text>
         )}
+
+    <SegmentedButtons
+        value={activeTab}
+        onValueChange={setActiveTab}
+        buttons={[
+          { value: 'badges', label: 'Badges' },
+          { value: 'challenges', label: 'Défis' },
+          { value: 'leaderboard', label: 'Classement' }
+        ]}
+        style={styles.tabs}
+      />
+      {renderContent()}
 
         {rewards.map((reward) => (
           <Card key={reward.id} style={styles.card}>
@@ -70,7 +103,7 @@ export const RewardsScreen = ({ navigation }) => {
             <Card.Actions>
               <Button
                 mode="contained"
-                onPress={() => handleAddToCart({...reward, type: 'reward'})}
+                onPress={() => handleAddToCart({ ...reward, type: 'reward' })}
                 disabled={reward.stock < 1}
               >
                 Ajouter au panier
@@ -104,7 +137,9 @@ export const RewardsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+  },
+  tabs: {
+    margin: 16,
   },
   title: {
     marginBottom: 16,

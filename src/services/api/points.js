@@ -78,5 +78,51 @@ export const pointsApi = {
       console.error('Error giving points:', error)
       throw error
     }
+  },
+
+  async getSteps(userId, period = 'daily') {
+    try {
+      let startDate, endDate
+      const now = new Date()
+
+      switch (period) {
+        case 'weekly':
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay())
+          endDate = new Date(startDate)
+          endDate.setDate(startDate.getDate() + 6)
+          break
+        case 'monthly':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+          break
+        default: // daily
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+          endDate = new Date(startDate)
+          break
+      }
+
+      const { data, error } = await supabase
+        .from('daily_points')
+        .select('steps_count, points, validated_at')
+        .eq('user_id', userId)
+        .gte('date', startDate.toISOString().split('T')[0])
+        .lte('date', endDate.toISOString().split('T')[0])
+
+      if (error) throw error
+
+      // Aggregate steps and points for the period
+      const totalSteps = data.reduce((sum, day) => sum + (day.steps_count || 0), 0)
+      const totalPoints = data.reduce((sum, day) => sum + (day.points_earned || 0), 0)
+      const isValidated = period === 'daily' ? data.some(day => day.validated_at) : null
+
+      return {
+        steps_count: totalSteps,
+        points_earned: totalPoints,
+        is_validated: isValidated
+      }
+    } catch (error) {
+      console.error('Error fetching steps:', error)
+      throw error
+    }
   }
 }
