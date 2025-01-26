@@ -54,8 +54,8 @@ const floatingMenu = StyleSheet.create({
   },
   diaCountContainer: {},
   counter: {
-    width: 20,
-    height: 20,
+    width: 25,
+    height: 25,
     borderRadius: 20,
     textAlign: 'center',
     color: '#fff',
@@ -72,12 +72,10 @@ const floatingMenu = StyleSheet.create({
   },
   badgeCounter: {
     backgroundColor: AppColors.darkColor,
-    borderRadius: 30,
+    borderRadius: 15,
     paddingHorizontal: 10,
-    paddingVertical: 2,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
     shadowColor: AppColors.borderColor,
   },
   diaCount: {

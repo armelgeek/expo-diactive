@@ -40,7 +40,7 @@ const homeStyles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: 5,
     alignItems: 'flex-end',
-    marginBottom: 20,
+    marginBottom: 10,
     paddingTop: 24,
   },
   steps: {

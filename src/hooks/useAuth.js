@@ -10,7 +10,7 @@ export const useAuth = () => {
   useEffect(() => {
     // Vérifier si on est en mode démo
     if (isDemoMode) {
-      setUser({ 
+      setUser({
         id: 'demo-user',
         email: 'demo@example.com',
         user_metadata: {
@@ -23,7 +23,7 @@ export const useAuth = () => {
 
     // Sinon, utiliser Supabase auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
+      setUser(session?.user?.user_metadata ?? null)
       setLoading(false)
     })
 
@@ -56,8 +56,9 @@ export const useAuth = () => {
 
   return {
     user,
+    isAuthenticated: !!user,
     loading,
     signIn,
     signOut,
   }
-} 
+}

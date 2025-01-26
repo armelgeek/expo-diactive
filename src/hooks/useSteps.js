@@ -8,6 +8,7 @@ export const useSteps = () => {
   const [loading, setLoading] = useState(false)
   const [steps, setSteps] = useState(0)
   const [points, setPoints] = useState(0)
+  const [period, setPeriod] = useState('daily')
   const [cumulativePoints, setCumulativePoints] = useState(0)
   const [weeklyStats, setWeeklyStats] = useState([])
   const [isValidated, setIsValidated] = useState(false)
@@ -109,6 +110,10 @@ export const useSteps = () => {
     }
   }
 
+  const changePeriod = (newPeriod) => {
+    setPeriod(newPeriod)
+  }
+
   useEffect(() => {
     refreshData()
     checkValidationStatus()
@@ -147,5 +152,7 @@ export const useSteps = () => {
     updateSteps,
     refreshData,
     validateDailySteps,
+    period,
+    changePeriod
   }
 }

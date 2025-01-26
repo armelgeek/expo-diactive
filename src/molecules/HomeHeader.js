@@ -7,47 +7,54 @@ import { ThemeToggle } from './ThemeToggle'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../hooks/useAuth'
 import { useSteps } from '../hooks/useSteps'
+import headerMenu from '../styles/common/headerMenu';
+import resources from '../resources/resources';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import UserAccount from './UserAccount'
 
 export const HomeHeader = () => {
 	const { theme } = useTheme()
 	const navigation = useNavigation()
 	const insets = useSafeAreaInsets()
-	const { user } = useAuth()
+	const { user, isAuthenticated } = useAuth()
 	const { points } = useSteps()
 
 	return (
 		<View style={[
 			styles.container,
 			{
-				backgroundColor: theme.colors.surface,
 				paddingTop: insets.top
 			}
 		]}>
 			<View style={styles.content}>
 				<View style={styles.leftSection}>
-					<TouchableOpacity
-						style={styles.profileButton}
-						onPress={() => navigation.navigate('Profile')}
-					>
-						<Image
-							source={require('../../assets/avatar.jpg')}
-							style={styles.avatar}
-						/>
-						<Text variant="titleMedium" style={{ color: theme.colors.text }}>
-							{user?.user_metadata?.username}
-						</Text>
-					</TouchableOpacity>
+					{!isAuthenticated ? (
+						<UserAccount userIcon={resources.icons.user} username={'Créer un compte'} />
+					) : (
+						<UserAccount userIcon={resources.icons.user} username={user?.full_name} />
+					)}
 				</View>
 
 				<View style={styles.rightSection}>
-					<View style={[styles.pointsContainer, { backgroundColor: theme.colors.background }]}>
-						<Text variant="titleMedium" style={{ color: theme.colors.primary }}>
+					<View style={headerMenu.badgeCounter}>
+						<Text variant="titleMedium" style={headerMenu.diaCount}>
 							{points} D
 						</Text>
 					</View>
 					<NotificationButton />
 					<ThemeToggle />
+					<TouchableOpacity
+						style={styles.languageButton}
+						onPress={() => navigation.navigate('Language')}
+					>
+						<Image
+							resizeMode="contain"
+							width={24}
+							height={24}
+							source={resources.icons.language}
+							style={styles.languageImage}
+						/>
+					</TouchableOpacity>
 				</View>
 			</View>
 		</View>
@@ -72,7 +79,7 @@ const styles = StyleSheet.create({
 	rightSection: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		gap: 5,
+		gap: 10
 	},
 	profileButton: {
 		flexDirection: 'row',
@@ -88,5 +95,13 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 12,
 		paddingVertical: 4,
 		borderRadius: 16,
+	},
+	languageButton: {
+		width: 24,
+		height: 24,
+	},
+	languageImage: {
+		width: 24,
+		height: 24,
 	},
 })

@@ -1,92 +1,85 @@
-import React from 'react'
-import { View, StyleSheet, TouchableOpacity } from 'react-native'
-import { Icon } from 'react-native-elements'
-import { useTheme } from '../context/ThemeContext'
-import { useNavigation } from '@react-navigation/native'
+import React from 'react';
+import {View, Text, TouchableOpacity, Image, StyleSheet} from 'react-native';
+import floatingMenu from '../styles/common/floatingMenu';
+import resources from '../resources/resources';
+import {useNavigation, useRoute} from '@react-navigation/native';
 
-export const FloatingTabBar = ({ state, descriptors, navigation }) => {
-  const { theme } = useTheme()
+const menuItems = [
+  {
+    id: 'home',
+    label: 'Activité',
+    icon: resources.icons.walking,
+    screen: 'Home',
+  },
+  {
+    id: 'social',
+    label: 'Sociale',
+    icon: resources.icons.social,
+    screen: 'Social',
+  },
+  {
+    id: 'awards',
+    label: 'Coffre +',
+    icon: resources.icons.foot,
+    screen: 'Awards',
+  },
+  {
+    id: 'plans',
+    label: 'Bon Plan',
+    icon: resources.icons.shopping,
+    screen: 'GoodPlan',
+  },
+];
+
+export const FloatingTabBar = () => {
+  const navigation = useNavigation();
+  const route = useRoute();
+
+  const isActiveScreen = (screenName) => {
+    return route.name === screenName;
+  };
+
+  const getMenuItemStyle = (screenName) => {
+    const isActive = isActiveScreen(screenName);
+    return {
+      ...floatingMenu.menuItem,
+      ...(isActive && floatingMenu.menuItemActive),
+    };
+  };
+
+  const getMenuTextStyle = (screenName) => {
+    const isActive = isActiveScreen(screenName);
+    return {
+      ...floatingMenu.menuText,
+      ...(isActive && floatingMenu.menuTextActive),
+    };
+  };
+
+  const getMenuImageStyle = (screenName) => {
+    const isActive = isActiveScreen(screenName);
+    return {
+      ...floatingMenu.menuImage,
+      ...(isActive && floatingMenu.menuImageActive),
+    };
+  };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.tabBar, { backgroundColor: theme.colors.surface }]}>
+    <View style={floatingMenu.container}>
+      {menuItems.map(item => (
         <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigation.jumpTo('Dashboard')}
-        >
-          <Icon
-            name="directions-walk"
-            type="material"
-            size={24}
-            color={state.index === 0 ? theme.colors.primary : theme.colors.text}
-          />
+          key={item.id}
+          onPress={() => navigation.navigate(item.screen)}
+          style={getMenuItemStyle(item.screen)}>
+          <View style={floatingMenu.iconContainer}>
+            <Image source={item.icon} style={getMenuImageStyle(item.screen)} />
+            {isActiveScreen(item.screen) && (
+              <View style={floatingMenu.activeIndicator} />
+            )}
+          </View>
+          <Text style={getMenuTextStyle(item.screen)}>{item.label}</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigation.jumpTo('Social')}
-        >
-          <Icon
-            name="people"
-            type="material"
-            size={24}
-            color={state.index === 1 ? theme.colors.primary : theme.colors.text}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigation.jumpTo('Rewards')}
-        >
-          <Icon
-            name="emoji-events"
-            type="material"
-            size={24}
-            color={state.index === 2 ? theme.colors.primary : theme.colors.text}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigation.jumpTo('Marketplace')}
-        >
-          <Icon
-            name="store"
-            type="material"
-            size={24}
-            color={state.index === 3 ? theme.colors.primary : theme.colors.text}
-          />
-        </TouchableOpacity>
-      </View>
+      ))}
     </View>
-  )
-}
+  );
+};
 
-
-const styles = StyleSheet.create({
-	container: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
-		paddingHorizontal: 16,
-		paddingBottom: 16,
-	},
-	tabBar: {
-		flexDirection: 'row',
-		justifyContent: 'space-around',
-		alignItems: 'center',
-		height: 64,
-		borderRadius: 32,
-		elevation: 8,
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 4 },
-		shadowOpacity: 0.25,
-		shadowRadius: 8,
-	},
-	tabItem: {
-		flex: 1,
-		alignItems: 'center',
-		justifyContent: 'center',
-	},
-})

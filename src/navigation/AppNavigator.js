@@ -4,7 +4,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { FloatingTabBar } from '../molecules/FloatingTabBar'
 import { HomeHeader } from '../molecules/HomeHeader'
 
-// Screens
 import HomeScreen from '../pages/home/HomeScreen'
 import { RewardsScreen } from '../pages/rewards/RewardsScreen'
 import SocialScreen from '../pages/social/SocialScreen'

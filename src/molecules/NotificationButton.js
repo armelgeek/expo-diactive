@@ -5,6 +5,7 @@ import { Icon } from 'react-native-elements'
 import { useNotifications } from '../hooks/useNotifications'
 import { useNavigation } from '@react-navigation/native'
 import { useTheme } from '../context/ThemeContext'
+import { AppColors } from '../theme'
 
 export const NotificationButton = () => {
 	const { unreadCount } = useNotifications()
@@ -20,7 +21,8 @@ export const NotificationButton = () => {
 				name="notifications"
 				type="material"
 				size={24}
-				color={theme.colors.primary}
+				color={AppColors.greenDiactiv}
+				containerStyle={{ transform: [{ rotate: '45deg' }] }}
 			/>
 			{unreadCount > 0 && (
 				<Badge
@@ -36,8 +38,6 @@ export const NotificationButton = () => {
 
 const styles = StyleSheet.create({
 	container: {
-		padding: 8,
-		marginRight: 8,
 		position: 'relative',
 		borderRadius: 20,
 	},

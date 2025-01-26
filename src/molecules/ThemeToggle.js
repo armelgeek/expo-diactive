@@ -3,6 +3,7 @@ import { TouchableOpacity, StyleSheet } from 'react-native'
 import { Icon } from 'react-native-elements'
 import { Menu } from 'react-native-paper'
 import { useTheme } from '../context/ThemeContext'
+import { AppColors } from '../theme'
 
 export const ThemeToggle = () => {
 	const { theme, themePreference, setTheme } = useTheme()
@@ -32,7 +33,7 @@ export const ThemeToggle = () => {
 						name={getThemeIcon()}
 						type="material"
 						size={24}
-						color={theme.colors.primary}
+						color={AppColors.danger}
 					/>
 				</TouchableOpacity>
 			}
@@ -67,8 +68,6 @@ export const ThemeToggle = () => {
 
 const styles = StyleSheet.create({
 	container: {
-		padding: 8,
-		marginRight: 8,
 		position: 'relative',
 		borderRadius: 20,
 	},

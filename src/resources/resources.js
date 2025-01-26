@@ -49,7 +49,7 @@ const resources = {
   },
   mascot: {
     walk: require('./images/mascot/run.png'),
-    happy: require('./images/mascot/pngwing.png'),
+    happy: require('./images/mascot/happy.png'),
     bighappy: require('./images/mascot/big-happy.png'),
   },
   onboarding: {

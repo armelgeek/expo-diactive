@@ -4,7 +4,7 @@ import { Button } from '../../atoms/Button'
 import { AuthTemplate } from '../../templates/AuthTemplate'
 import { supabase } from '../../services/supabase'
 
-export default function LoginScreen({ navigation }) {
+export const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -34,7 +34,7 @@ export default function LoginScreen({ navigation }) {
         onSubmit={signInWithEmail}
         loading={loading}
       />
-      
+
       <Button
         title="S'inscrire"
         type="clear"
@@ -47,4 +47,6 @@ export default function LoginScreen({ navigation }) {
       />
     </AuthTemplate>
   )
-} 
+}
+
+export default LoginScreen
