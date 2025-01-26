@@ -37,7 +37,7 @@ export const HomeHeader = () => {
 
 				<View style={styles.rightSection}>
 					<View style={headerMenu.badgeCounter}>
-						<Text variant="titleMedium" style={headerMenu.diaCount}>
+						<Text style={headerMenu.diaCount}>
 							{points} D
 						</Text>
 					</View>

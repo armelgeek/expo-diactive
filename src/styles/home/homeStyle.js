@@ -72,12 +72,11 @@ const homeStyles = StyleSheet.create({
     fontFamily: FontWeights.Regular.fontFamily,
     fontSize: FontSizes.Heading1.fontSize,
     textAlign: 'center',
-    marginBottom: 35,
-    color: '#000'
+    marginBottom: 35
   },
   bold: {
-    fontSize: FontSizes.Heading1.fontSize,
-    fontFamily: FontWeights.Bold.fontFamily,
+    fontSize: FontSizes.Heading2.fontSize,
+    fontFamily: FontWeights.Bold1.fontFamily,
   },
 });
 

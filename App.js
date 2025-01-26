@@ -6,19 +6,27 @@ import { I18nProvider } from './src/providers/I18nProvider'
 import AppNavigator from './src/navigation/AppNavigator'
 import { CartProvider } from './src/contexts/CartContext'
 
-// Auth screens
 import LoginScreen from './src/pages/auth/LoginScreen'
 import RegisterScreen from './src/pages/auth/RegisterScreen'
 import { ForgotPasswordScreen } from './src/pages/auth/ForgotPasswordScreen'
 import { VerifyOTPScreen } from './src/pages/auth/VerifyOTPScreen'
+import { useFonts } from 'expo-font'
 
 const Stack = createNativeStackNavigator()
 
 export default function App() {
   const { user, loading } = useAuth()
+  const [fontsLoaded] = useFonts({
+    "Montserrat-Bold": require("./assets/fonts/Montserrat-Bold.ttf"),
+    "Montserrat-Regular": require("./assets/fonts/Montserrat-Regular.ttf"),
+    "Montserrat-Light": require("./assets/fonts/Montserrat-Light.ttf"),
+    "Poppins-Regular": require("./assets/fonts/Poppins-Regular.ttf"),
+    "Poppins-Bold": require("./assets/fonts/Poppins-Bold.ttf"),
+    "Poppins-Light": require("./assets/fonts/Poppins-Light.ttf")
+  });
 
-  if (loading) {
-    return null // Ou un écran de chargement
+  if (loading || !fontsLoaded) {
+    return null
   }
 
   return (

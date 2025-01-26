@@ -13,6 +13,8 @@ import resources from '../../resources/resources'
 import DayAndAverage from '../../molecules/DayAndAverage'
 import StepCounter from '../../molecules/StepCounter'
 import CallAction from '../../molecules/CallAction'
+import DiaCompare from '../../molecules/DiaCompare'
+import DiaCompareStat from '../../molecules/DiaCompareStat'
 
 const HomeScreen = ({ navigation }) => {
   const { t } = useTranslation()
@@ -84,7 +86,7 @@ const HomeScreen = ({ navigation }) => {
     segments: [
       {
         total: dailyGoal,
-        filled: getProgressPercentage,
+        filled: getProgressPercentage(),
       },
     ],
   };
@@ -92,8 +94,8 @@ const HomeScreen = ({ navigation }) => {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView style={styles.content}>
 
-       <View style={styles.periodSelector}>
-        <HexagonButton
+        <View style={styles.periodSelector}>
+          <HexagonButton
             variant="extraSmall"
             text={t('period.day')}
             color={
@@ -118,42 +120,45 @@ const HomeScreen = ({ navigation }) => {
               period === 'monthly' ? AppColors.primary : AppColors.darkColor
             }
             textColor={period === 'monthly' ? 'white' : AppColors.lightGray}
-              onPress={() => changePeriod('monthly')}
+            onPress={() => changePeriod('monthly')}
           />
         </View>
 
 
 
         <View style={styles.mascotContainer}>
-          <Gauge {...options}/>
-          <StepCounter/>
+          <Gauge {...options} />
+          <StepCounter />
 
         </View>
         <CallAction>
           {period === 'daily' && (
             <>
-            <HexagonButton
-              variant="small"
-              text={isValidated ? t('home.stepsValidated') : t('home.validateSteps')}
-              onPress={handleValidation}
-              disabled={isValidated || steps === 0}
-              style={styles.validateButton}
-            />
+              <HexagonButton
+                variant="small"
+                text={isValidated ? t('home.stepsValidated') : t('home.validateSteps')}
+                onPress={handleValidation}
+                disabled={isValidated || steps === 0}
+                style={styles.validateButton}
+              />
 
-            {!isValidated && steps > 0 && (
-              <Text variant="bodySmall" style={[styles.warning, { color: theme.colors.error }]}>
-                {t('home.warning')}
-              </Text>
-            )}
-          </>
-        )}
-      </CallAction>
+              {!isValidated && steps > 0 && (
+                <Text variant="bodySmall" style={[styles.warning, { color: theme.colors.error }]}>
+                  {t('home.warning')}
+                </Text>
+              )}
+            </>
+          )}
+        </CallAction>
         <StatsCard
           distance={distance}
           calories={calories}
           diamonds={diamonds}
           validatedSteps={steps}
         />
+        <DiaCompare/>
+        <DiaCompareStat/>
+        <View style={{height: 100}}/>
       </ScrollView>
     </View>
   )

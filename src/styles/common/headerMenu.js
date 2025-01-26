@@ -73,14 +73,15 @@ const floatingMenu = StyleSheet.create({
   badgeCounter: {
     backgroundColor: AppColors.darkColor,
     borderRadius: 15,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 3,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: AppColors.borderColor,
   },
   diaCount: {
     color: '#fff',
-    fontSize: FontSizes.Heading2.fontSize,
+    fontSize: FontSizes.Body.fontSize,
     fontFamily: FontWeights.Regular.fontFamily,
   },
   litter: {

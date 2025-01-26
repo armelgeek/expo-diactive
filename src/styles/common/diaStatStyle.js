@@ -3,10 +3,10 @@ import {AppColors, FontSizes, FontWeights} from '../../theme';
 
 const diaStatStyle = StyleSheet.create({
   container: {
-    width: '90%',
     height: 70,
-    backgroundColor: '#000',
     paddingHorizontal: 5,
+    marginHorizontal: 15,
+    backgroundColor: '#000',
     borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
