@@ -53,3 +53,8 @@ export const darkTheme = {
 export const getTheme = (isDark = false) => {
 	return isDark ? darkTheme : lightTheme
 }
+
+import {AppColors} from './Colors';
+import {FontWeights, FontSizes, BorderWidths, BorderRadius} from './Typography';
+
+export {AppColors, FontWeights, FontSizes, BorderWidths, BorderRadius};

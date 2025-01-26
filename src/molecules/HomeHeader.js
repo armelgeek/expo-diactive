@@ -1,7 +1,6 @@
 import React from 'react'
 import { View, StyleSheet, TouchableOpacity, Image } from 'react-native'
 import { Text } from 'react-native-paper'
-import { Icon } from 'react-native-elements'
 import { useNavigation } from '@react-navigation/native'
 import { NotificationButton } from './NotificationButton'
 import { ThemeToggle } from './ThemeToggle'
@@ -57,13 +56,6 @@ export const HomeHeader = () => {
 
 const styles = StyleSheet.create({
 	container: {
-		borderBottomLeftRadius: 20,
-		borderBottomRightRadius: 20,
-		elevation: 4,
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.1,
-		shadowRadius: 4,
 	},
 	content: {
 		flexDirection: 'row',
@@ -80,7 +72,7 @@ const styles = StyleSheet.create({
 	rightSection: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		gap: 8,
+		gap: 5,
 	},
 	profileButton: {
 		flexDirection: 'row',
@@ -88,8 +80,8 @@ const styles = StyleSheet.create({
 		gap: 8,
 	},
 	avatar: {
-		width: 40,
-		height: 40,
+		width: 26,
+		height: 26,
 		borderRadius: 20,
 	},
 	pointsContainer: {
